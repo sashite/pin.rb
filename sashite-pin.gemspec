@@ -5,10 +5,15 @@ Gem::Specification.new do |spec|
   spec.version = ::File.read("VERSION.semver").chomp
   spec.author  = "Cyril Kato"
   spec.email   = "contact@cyril.email"
-  spec.summary = "TODO"
+  spec.summary = "PIN (Piece Identifier Notation) implementation for Ruby with immutable piece objects"
 
   spec.description = <<~DESC
-    TODO
+    PIN (Piece Identifier Notation) provides an ASCII-based format for representing pieces
+    in abstract strategy board games. This gem implements the PIN Specification v1.0.0 with
+    a modern Ruby interface featuring immutable piece objects and functional programming
+    principles. PIN translates piece attributes from the Game Protocol into a compact,
+    portable notation system using ASCII letters with optional state modifiers and
+    case-based player group classification.
   DESC
 
   spec.homepage               = "https://github.com/sashite/pin.rb"
