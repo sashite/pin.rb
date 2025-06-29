@@ -275,19 +275,6 @@ module Sashite
         [self.class, @letter, @enhanced, @diminished].hash
       end
 
-      # Custom inspection for debugging
-      #
-      # @return [String] detailed string representation
-      def inspect
-        modifiers = []
-        modifiers << "enhanced=true" if enhanced?
-        modifiers << "diminished=true" if diminished?
-
-        modifier_str = modifiers.empty? ? "" : " #{modifiers.join(' ')}"
-        player = first_player? ? "first" : "second"
-        "#<#{self.class.name}:0x#{object_id.to_s(16)} letter='#{letter}' type='#{type}' player=#{player}#{modifier_str}>"
-      end
-
       # Validate that the letter is a single ASCII letter
       #
       # @param letter [String] the letter to validate
