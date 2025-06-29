@@ -29,7 +29,7 @@ gem install sashite-pin
 ## Usage
 
 ```ruby
-require "sashite-pin"
+require "sashite/pin"
 
 # Parse PIN strings into piece objects
 piece = Sashite::Pin.parse("K")          # => #<Pin::Piece letter="K" type="K" player=first>
@@ -45,31 +45,31 @@ Sashite::Pin.valid?("invalid")           # => false
 
 # State manipulation (returns new immutable instances)
 enhanced = piece.enhance                 # => #<Pin::Piece letter="K" type="K" player=first enhanced=true>
-enhanced.to_s                           # => "+K"
+enhanced.to_s                            # => "+K"
 diminished = piece.diminish              # => #<Pin::Piece letter="K" type="K" player=first diminished=true>
-diminished.to_s                         # => "-K"
+diminished.to_s                          # => "-K"
 
 # Player manipulation
 flipped = piece.flip                     # => #<Pin::Piece letter="k" type="K" player=second>
-flipped.to_s                            # => "k"
+flipped.to_s                             # => "k"
 
 # State queries
-piece.normal?                           # => true
-enhanced.enhanced?                      # => true
-diminished.diminished?                  # => true
+piece.normal?                            # => true
+enhanced.enhanced?                       # => true
+diminished.diminished?                   # => true
 
 # Type and player comparison
 king1 = Sashite::Pin.parse("K")
 king2 = Sashite::Pin.parse("k")
 queen = Sashite::Pin.parse("Q")
 
-king1.same_type?(king2)                 # => true (both kings)
-king1.same_player?(queen)               # => true (both first player)
-king1.same_type?(queen)                 # => false (different types)
+king1.same_type?(king2)                  # => true (both kings)
+king1.same_player?(queen)                # => true (both first player)
+king1.same_type?(queen)                  # => false (different types)
 
 # Functional transformations can be chained
 pawn = Sashite::Pin.parse("P")
-enemy_promoted = pawn.flip.enhance      # => "+p" (black promoted pawn)
+enemy_promoted = pawn.flip.enhance       # => "+p" (black promoted pawn)
 ```
 
 ## Format Specification
@@ -107,18 +107,18 @@ enemy_promoted = pawn.flip.enhance      # => "+p" (black promoted pawn)
 # Standard pieces
 king = Sashite::Pin.parse("K")        # => white king
 king.first_player?                    # => true
-king.type                            # => "K"
+king.type                             # => "K"
 
 # State modifiers for special conditions
 castling_king = king.enhance          # => castling-eligible king
-castling_king.to_s                   # => "+K"
+castling_king.to_s                    # => "+K"
 
 vulnerable_pawn = Sashite::Pin.parse("P").diminish  # => en passant vulnerable
-vulnerable_pawn.to_s                 # => "-P"
+vulnerable_pawn.to_s                  # => "-P"
 
 # All piece types
 pieces = %w[K Q R B N P].map { |type| Sashite::Pin.parse(type) }
-black_pieces = pieces.map(&:flip)    # Convert to black pieces
+black_pieces = pieces.map(&:flip)     # Convert to black pieces
 ```
 
 ### Japanese Chess (Shōgi)
@@ -129,15 +129,15 @@ bishop = Sashite::Pin.parse("B")      # => white bishop
 
 # Promoted pieces (enhanced state)
 dragon_king = rook.enhance            # => promoted rook (Dragon King)
-dragon_king.to_s                     # => "+R"
+dragon_king.to_s                      # => "+R"
 
 dragon_horse = bishop.enhance         # => promoted bishop (Dragon Horse)
-dragon_horse.to_s                    # => "+B"
+dragon_horse.to_s                     # => "+B"
 
 # Promoted pawn
 pawn = Sashite::Pin.parse("P")
 tokin = pawn.enhance                  # => promoted pawn (Tokin)
-tokin.to_s                           # => "+P"
+tokin.to_s                            # => "+P"
 
 # All promotable pieces can use the same pattern
 promotable = %w[R B S N L P].map { |type| Sashite::Pin.parse(type) }
@@ -152,7 +152,7 @@ pawn = Sashite::Pin.parse("P")        # => white Bia (pawn)
 
 # Promoted pawns
 bia_kaew = pawn.enhance               # => promoted pawn (Bia Kaew)
-bia_kaew.to_s                        # => "+P"
+bia_kaew.to_s                         # => "+P"
 
 # Makruk pieces
 makruk_pieces = %w[K M R B N P].map { |type| Sashite::Pin.parse(type) }
@@ -163,12 +163,12 @@ makruk_pieces = %w[K M R B N P].map { |type| Sashite::Pin.parse(type) }
 # Pieces with positional states
 general = Sashite::Pin.parse("G")     # => red general
 flying_general = general.enhance      # => flying general (special state)
-flying_general.to_s                  # => "+G"
+flying_general.to_s                   # => "+G"
 
 # Soldiers that crossed the river
 soldier = Sashite::Pin.parse("P")
 crossed_soldier = soldier.enhance     # => soldier with enhanced movement
-crossed_soldier.to_s                 # => "+P"
+crossed_soldier.to_s                  # => "+P"
 ```
 
 ## API Reference
@@ -298,7 +298,7 @@ end
 pins = %w[K Q +R B N P k q r +b n -p]
 analysis = analyze_pieces(pins)
 puts analysis[:by_player][:first].size  # => 6
-puts analysis[:promoted]                 # => 2
+puts analysis[:promoted]                # => 2
 ```
 
 ### Move Validation Example
@@ -318,10 +318,10 @@ def can_promote?(piece, target_rank)
 end
 
 pawn = Sashite::Pin.parse("P")
-puts can_promote?(pawn, 8)     # => true
+puts can_promote?(pawn, 8)          # => true
 
 promoted_pawn = pawn.enhance
-puts can_promote?(promoted_pawn, 8)  # => false (already promoted)
+puts can_promote?(promoted_pawn, 8) # => false (already promoted)
 ```
 
 ## Protocol Mapping
