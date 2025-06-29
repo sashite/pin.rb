@@ -84,7 +84,6 @@ module Sashite
                  else
                    (@diminished ? DIMINISHED_PREFIX : "")
                  end
-
         "#{prefix}#{letter}"
       end
 
@@ -231,7 +230,6 @@ module Sashite
       def state
         return :enhanced if enhanced?
         return :diminished if diminished?
-
         :normal
       end
 
@@ -243,7 +241,6 @@ module Sashite
       #   king1.same_type?(king2)  # K and k => true, K and Q => false
       def same_type?(other)
         return false unless other.is_a?(self.class)
-
         type == other.type
       end
 
@@ -253,7 +250,6 @@ module Sashite
       # @return [Boolean] true if same player
       def same_player?(other)
         return false unless other.is_a?(self.class)
-
         side == other.side
       end
 
@@ -269,11 +265,14 @@ module Sashite
           diminished? == other.diminished?
       end
 
+      # Alias for == to ensure Set functionality works correctly
+      alias eql? ==
+
       # Custom hash implementation for use in collections
       #
       # @return [Integer] hash value
       def hash
-        [letter, @enhanced, @diminished].hash
+        [self.class, @letter, @enhanced, @diminished].hash
       end
 
       # Custom inspection for debugging
