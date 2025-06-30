@@ -22,27 +22,55 @@ module Sashite
       # Valid state modifiers
       ENHANCED_PREFIX = "+"
       DIMINISHED_PREFIX = "-"
+      NORMAL_PREFIX = ""
+
+      # State constants
+      ENHANCED_STATE = :enhanced
+      DIMINISHED_STATE = :diminished
+      NORMAL_STATE = :normal
+
+      # Player side constants
+      FIRST_PLAYER = :first
+      SECOND_PLAYER = :second
+
+      # Valid types (A-Z)
+      VALID_TYPES = (:A..:Z).to_a.freeze
+
+      # Valid sides
+      VALID_SIDES = [FIRST_PLAYER, SECOND_PLAYER].freeze
+
+      # Valid states
+      VALID_STATES = [NORMAL_STATE, ENHANCED_STATE, DIMINISHED_STATE].freeze
 
       # Error messages
       ERROR_INVALID_PIN = "Invalid PIN string: %s"
-      ERROR_INVALID_LETTER = "Letter must be a single ASCII letter (a-z or A-Z): %s"
+      ERROR_INVALID_TYPE = "Type must be a symbol from :A to :Z, got: %s"
+      ERROR_INVALID_SIDE = "Side must be :first or :second, got: %s"
+      ERROR_INVALID_STATE = "State must be :normal, :enhanced, or :diminished, got: %s"
 
-      # @return [String] the base letter identifier (type + side)
-      attr_reader :letter
+      # @return [Symbol] the piece type (:A to :Z)
+      attr_reader :type
+
+      # @return [Symbol] the player side (:first or :second)
+      attr_reader :side
+
+      # @return [Symbol] the piece state (:normal, :enhanced, or :diminished)
+      attr_reader :state
 
       # Create a new piece instance
       #
-      # @param letter [String] single ASCII letter (a-z or A-Z)
-      # @param enhanced [Boolean] whether the piece has enhanced state
-      # @param diminished [Boolean] whether the piece has diminished state
+      # @param type [Symbol] piece type (:A to :Z)
+      # @param side [Symbol] player side (:first or :second)
+      # @param state [Symbol] piece state (:normal, :enhanced, or :diminished)
       # @raise [ArgumentError] if parameters are invalid
-      def initialize(letter, enhanced: false, diminished: false)
-        self.class.validate_letter(letter)
-        self.class.validate_state_combination(enhanced, diminished)
+      def initialize(type, side, state = NORMAL_STATE)
+        self.class.validate_type(type)
+        self.class.validate_side(side)
+        self.class.validate_state(state)
 
-        @letter = letter.freeze
-        @enhanced = enhanced
-        @diminished = diminished
+        @type = type
+        @side = side
+        @state = state
 
         freeze
       end
@@ -53,9 +81,9 @@ module Sashite
       # @return [Piece] new piece instance
       # @raise [ArgumentError] if the PIN string is invalid
       # @example
-      #   Pin::Piece.parse("k")     # => #<Pin::Piece letter="k">
-      #   Pin::Piece.parse("+R")    # => #<Pin::Piece letter="R" enhanced=true>
-      #   Pin::Piece.parse("-p")    # => #<Pin::Piece letter="p" diminished=true>
+      #   Pin::Piece.parse("k")     # => #<Pin::Piece type=:K side=:second state=:normal>
+      #   Pin::Piece.parse("+R")    # => #<Pin::Piece type=:R side=:first state=:enhanced>
+      #   Pin::Piece.parse("-p")    # => #<Pin::Piece type=:P side=:second state=:diminished>
       def self.parse(pin_string)
         string_value = String(pin_string)
         matches = match_pattern(string_value)
@@ -64,11 +92,18 @@ module Sashite
         enhanced = matches[:prefix] == ENHANCED_PREFIX
         diminished = matches[:prefix] == DIMINISHED_PREFIX
 
-        new(
-          letter,
-          enhanced:   enhanced,
-          diminished: diminished
-        )
+        # Extract type and side from letter
+        piece_type = letter.upcase.to_sym
+        piece_side = letter == letter.upcase ? FIRST_PLAYER : SECOND_PLAYER
+        piece_state = if enhanced
+                        ENHANCED_STATE
+                      elsif diminished
+                        DIMINISHED_STATE
+                      else
+                        NORMAL_STATE
+                      end
+
+        new(piece_type, piece_side, piece_state)
       end
 
       # Convert the piece to its PIN string representation
@@ -79,178 +114,196 @@ module Sashite
       #   piece.to_s  # => "-p"
       #   piece.to_s  # => "K"
       def to_s
-        prefix = if @enhanced
-                   ENHANCED_PREFIX
-                 else
-                   (@diminished ? DIMINISHED_PREFIX : "")
-                 end
         "#{prefix}#{letter}"
+      end
+
+      # Get the letter representation
+      #
+      # @return [String] letter representation combining type and side
+      def letter
+        first_player? ? type.to_s.upcase : type.to_s.downcase
+      end
+
+      # Get the prefix representation
+      #
+      # @return [String] prefix representing the state
+      def prefix
+        case state
+        when ENHANCED_STATE then ENHANCED_PREFIX
+        when DIMINISHED_STATE then DIMINISHED_PREFIX
+        else NORMAL_PREFIX
+        end
       end
 
       # Create a new piece with enhanced state
       #
       # @return [Piece] new piece instance with enhanced state
       # @example
-      #   piece.enhance  # k => +k
+      #   piece.enhance  # (:K, :first, :normal) => (:K, :first, :enhanced)
       def enhance
         return self if enhanced?
 
-        self.class.new(
-          letter,
-          enhanced:   true,
-          diminished: false
-        )
+        self.class.new(type, side, ENHANCED_STATE)
       end
 
       # Create a new piece without enhanced state
       #
       # @return [Piece] new piece instance without enhanced state
       # @example
-      #   piece.unenhance  # +k => k
+      #   piece.unenhance  # (:K, :first, :enhanced) => (:K, :first, :normal)
       def unenhance
         return self unless enhanced?
 
-        self.class.new(
-          letter,
-          enhanced:   false,
-          diminished: @diminished
-        )
+        self.class.new(type, side, NORMAL_STATE)
       end
 
       # Create a new piece with diminished state
       #
       # @return [Piece] new piece instance with diminished state
       # @example
-      #   piece.diminish  # k => -k
+      #   piece.diminish  # (:K, :first, :normal) => (:K, :first, :diminished)
       def diminish
         return self if diminished?
 
-        self.class.new(
-          letter,
-          enhanced:   false,
-          diminished: true
-        )
+        self.class.new(type, side, DIMINISHED_STATE)
       end
 
       # Create a new piece without diminished state
       #
       # @return [Piece] new piece instance without diminished state
       # @example
-      #   piece.undiminish  # -k => k
+      #   piece.undiminish  # (:K, :first, :diminished) => (:K, :first, :normal)
       def undiminish
         return self unless diminished?
 
-        self.class.new(
-          letter,
-          enhanced:   @enhanced,
-          diminished: false
-        )
+        self.class.new(type, side, NORMAL_STATE)
       end
 
       # Create a new piece with normal state (no modifiers)
       #
       # @return [Piece] new piece instance with normal state
       # @example
-      #   piece.normalize  # +k => k, -k => k
+      #   piece.normalize  # (:K, :first, :enhanced) => (:K, :first, :normal)
       def normalize
         return self if normal?
 
-        self.class.new(letter)
+        self.class.new(type, side, NORMAL_STATE)
       end
 
       # Create a new piece with opposite ownership (case)
       #
       # @return [Piece] new piece instance with flipped case
       # @example
-      #   piece.flip  # K => k, k => K
+      #   piece.flip  # (:K, :first, :normal) => (:K, :second, :normal)
       def flip
-        flipped_letter = letter.swapcase
+        new_side = first_player? ? SECOND_PLAYER : FIRST_PLAYER
+        self.class.new(type, new_side, state)
+      end
 
-        self.class.new(
-          flipped_letter,
-          enhanced:   @enhanced,
-          diminished: @diminished
-        )
+      # Create a new piece with a different type (keeping same side and state)
+      #
+      # @param new_type [Symbol] new type (:A to :Z)
+      # @return [Piece] new piece instance with different type
+      # @example
+      #   piece.with_type(:Q)  # (:K, :first, :normal) => (:Q, :first, :normal)
+      def with_type(new_type)
+        self.class.validate_type(new_type)
+        return self if type == new_type
+
+        self.class.new(new_type, side, state)
+      end
+
+      # Create a new piece with a different side (keeping same type and state)
+      #
+      # @param new_side [Symbol] :first or :second
+      # @return [Piece] new piece instance with different side
+      # @example
+      #   piece.with_side(:second)  # (:K, :first, :normal) => (:K, :second, :normal)
+      def with_side(new_side)
+        self.class.validate_side(new_side)
+        return self if side == new_side
+
+        self.class.new(type, new_side, state)
+      end
+
+      # Create a new piece with a different state (keeping same type and side)
+      #
+      # @param new_state [Symbol] :normal, :enhanced, or :diminished
+      # @return [Piece] new piece instance with different state
+      # @example
+      #   piece.with_state(:enhanced)  # (:K, :first, :normal) => (:K, :first, :enhanced)
+      def with_state(new_state)
+        self.class.validate_state(new_state)
+        return self if state == new_state
+
+        self.class.new(type, side, new_state)
       end
 
       # Check if the piece has enhanced state
       #
       # @return [Boolean] true if enhanced
       def enhanced?
-        @enhanced
+        state == ENHANCED_STATE
       end
 
       # Check if the piece has diminished state
       #
       # @return [Boolean] true if diminished
       def diminished?
-        @diminished
+        state == DIMINISHED_STATE
       end
 
       # Check if the piece has normal state (no modifiers)
       #
       # @return [Boolean] true if no modifiers are present
       def normal?
-        !enhanced? && !diminished?
+        state == NORMAL_STATE
       end
 
-      # Check if the piece belongs to the first player (uppercase)
+      # Check if the piece belongs to the first player
       #
-      # @return [Boolean] true if uppercase letter
+      # @return [Boolean] true if first player
       def first_player?
-        letter == letter.upcase
+        side == FIRST_PLAYER
       end
 
-      # Check if the piece belongs to the second player (lowercase)
+      # Check if the piece belongs to the second player
       #
-      # @return [Boolean] true if lowercase letter
+      # @return [Boolean] true if second player
       def second_player?
-        letter == letter.downcase
+        side == SECOND_PLAYER
       end
 
-      # Get the piece type (uppercase letter regardless of player)
-      #
-      # @return [String] uppercase letter representing the piece type
-      # @example
-      #   piece.type  # "k" => "K", "R" => "R", "+p" => "P"
-      def type
-        letter.upcase
-      end
-
-      # Get the player side based on letter case
-      #
-      # @return [Symbol] :first or :second
-      def side
-        first_player? ? :first : :second
-      end
-
-      # Get the state as a symbol
-      #
-      # @return [Symbol] :enhanced, :diminished, or :normal
-      def state
-        return :enhanced if enhanced?
-        return :diminished if diminished?
-        :normal
-      end
-
-      # Check if this piece is the same type as another (ignoring player and state)
+      # Check if this piece is the same type as another (ignoring side and state)
       #
       # @param other [Piece] piece to compare with
       # @return [Boolean] true if same type
       # @example
-      #   king1.same_type?(king2)  # K and k => true, K and Q => false
+      #   king1.same_type?(king2)  # (:K, :first, :normal) and (:K, :second, :enhanced) => true
       def same_type?(other)
         return false unless other.is_a?(self.class)
+
         type == other.type
       end
 
-      # Check if this piece belongs to the same player as another
+      # Check if this piece belongs to the same side as another
       #
       # @param other [Piece] piece to compare with
-      # @return [Boolean] true if same player
-      def same_player?(other)
+      # @return [Boolean] true if same side
+      def same_side?(other)
         return false unless other.is_a?(self.class)
+
         side == other.side
+      end
+
+      # Check if this piece has the same state as another
+      #
+      # @param other [Piece] piece to compare with
+      # @return [Boolean] true if same state
+      def same_state?(other)
+        return false unless other.is_a?(self.class)
+
+        state == other.state
       end
 
       # Custom equality comparison
@@ -260,9 +313,7 @@ module Sashite
       def ==(other)
         return false unless other.is_a?(self.class)
 
-        letter == other.letter &&
-          enhanced? == other.enhanced? &&
-          diminished? == other.diminished?
+        type == other.type && side == other.side && state == other.state
       end
 
       # Alias for == to ensure Set functionality works correctly
@@ -272,29 +323,37 @@ module Sashite
       #
       # @return [Integer] hash value
       def hash
-        [self.class, @letter, @enhanced, @diminished].hash
+        [self.class, type, side, state].hash
       end
 
-      # Validate that the letter is a single ASCII letter
+      # Validate that the type is a valid symbol
       #
-      # @param letter [String] the letter to validate
+      # @param type [Symbol] the type to validate
       # @raise [ArgumentError] if invalid
-      def self.validate_letter(letter)
-        letter_str = String(letter)
-        return if letter_str.match?(/\A[a-zA-Z]\z/)
+      def self.validate_type(type)
+        return if VALID_TYPES.include?(type)
 
-        raise ::ArgumentError, format(ERROR_INVALID_LETTER, letter_str)
+        raise ::ArgumentError, format(ERROR_INVALID_TYPE, type.inspect)
       end
 
-      # Validate that enhanced and diminished states are not both true
+      # Validate that the side is a valid symbol
       #
-      # @param enhanced [Boolean] enhanced state
-      # @param diminished [Boolean] diminished state
-      # @raise [ArgumentError] if both are true
-      def self.validate_state_combination(enhanced, diminished)
-        return unless enhanced && diminished
+      # @param side [Symbol] the side to validate
+      # @raise [ArgumentError] if invalid
+      def self.validate_side(side)
+        return if VALID_SIDES.include?(side)
 
-        raise ::ArgumentError, "A piece cannot be both enhanced and diminished"
+        raise ::ArgumentError, format(ERROR_INVALID_SIDE, side.inspect)
+      end
+
+      # Validate that the state is a valid symbol
+      #
+      # @param state [Symbol] the state to validate
+      # @raise [ArgumentError] if invalid
+      def self.validate_state(state)
+        return if VALID_STATES.include?(state)
+
+        raise ::ArgumentError, format(ERROR_INVALID_STATE, state.inspect)
       end
 
       # Match PIN pattern against string

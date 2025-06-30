@@ -47,10 +47,26 @@ module Sashite
     # @return [Pin::Piece] new piece instance
     # @raise [ArgumentError] if the PIN string is invalid
     # @example
-    #   Sashite::Pin.parse("K")     # => #<Pin::Piece letter="K">
-    #   Sashite::Pin.parse("+R")    # => #<Pin::Piece letter="R" enhanced=true>
+    #   Sashite::Pin.parse("K")     # => #<Pin::Piece type=:K side=:first state=:normal>
+    #   Sashite::Pin.parse("+R")    # => #<Pin::Piece type=:R side=:first state=:enhanced>
+    #   Sashite::Pin.parse("-p")    # => #<Pin::Piece type=:P side=:second state=:diminished>
     def self.parse(pin_string)
       Piece.parse(pin_string)
+    end
+
+    # Create a new piece instance
+    #
+    # @param type [Symbol] piece type (:A to :Z)
+    # @param side [Symbol] player side (:first or :second)
+    # @param state [Symbol] piece state (:normal, :enhanced, or :diminished)
+    # @return [Pin::Piece] new piece instance
+    # @raise [ArgumentError] if parameters are invalid
+    # @example
+    #   Sashite::Pin.piece(:K, :first, :normal)     # => #<Pin::Piece type=:K side=:first state=:normal>
+    #   Sashite::Pin.piece(:R, :first, :enhanced)   # => #<Pin::Piece type=:R side=:first state=:enhanced>
+    #   Sashite::Pin.piece(:P, :second, :diminished) # => #<Pin::Piece type=:P side=:second state=:diminished>
+    def self.piece(type, side, state = :normal)
+      Piece.new(type, side, state)
     end
   end
 end
