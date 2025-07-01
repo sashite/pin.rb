@@ -206,12 +206,28 @@ crossed_soldier.to_s                              # => "+P"
 - `Sashite::Pin::Piece.parse(pin_string)` - Parse PIN string (same as module method)
 
 #### Attribute Access
-- `#type` - Get piece type (symbol :A to :Z)
+- `#type` - Get piece type (symbol :A to :Z, always uppercase)
 - `#side` - Get player side (:first or :second)
 - `#state` - Get state (:normal, :enhanced, or :diminished)
-- `#letter` - Get letter representation (string)
+- `#letter` - Get letter representation (string, case determined by side)
 - `#prefix` - Get state prefix (string: "+", "-", or "")
 - `#to_s` - Convert to PIN string representation
+
+#### Type and Case Handling
+
+**Important**: The `type` attribute is always stored as an uppercase symbol (`:A` to `:Z`), regardless of the input case when parsing. The display case in `#letter` and `#to_s` is determined by the `side` attribute:
+
+```ruby
+# Both create the same internal type representation
+piece1 = Sashite::Pin.parse("K")  # type: :K, side: :first
+piece2 = Sashite::Pin.parse("k")  # type: :K, side: :second
+
+piece1.type    # => :K (uppercase symbol)
+piece2.type    # => :K (same uppercase symbol)
+
+piece1.letter  # => "K" (uppercase display)
+piece2.letter  # => "k" (lowercase display)
+```
 
 #### State Queries
 - `#normal?` - Check if normal state (no modifiers)
@@ -245,6 +261,30 @@ crossed_soldier.to_s                              # => "+P"
 - `Sashite::Pin::PIN_REGEX` - Regular expression for PIN validation
 
 ## Advanced Usage
+
+### Type Normalization Examples
+
+```ruby
+# Parsing different cases results in same type
+white_king = Sashite::Pin.parse("K")
+black_king = Sashite::Pin.parse("k")
+
+# Types are normalized to uppercase
+white_king.type  # => :K
+black_king.type  # => :K (same type!)
+
+# Sides are different
+white_king.side  # => :first
+black_king.side  # => :second
+
+# Display follows side convention
+white_king.letter # => "K"
+black_king.letter # => "k"
+
+# Same type, different sides
+white_king.same_type?(black_king)  # => true
+white_king.same_side?(black_king)  # => false
+```
 
 ### Immutable Transformations
 ```ruby
@@ -356,11 +396,15 @@ puts can_promote?(promoted_pawn, 8) # => false (already promoted)
 
 Following the [Game Protocol](https://sashite.dev/game-protocol/):
 
-| Protocol Attribute | PIN Encoding | Examples |
-|-------------------|--------------|----------|
-| **Type** | Symbol choice | `:K`/`:k` = King, `:P`/`:p` = Pawn |
-| **Side** | Symbol value | `:first` = First player, `:second` = Second player |
-| **State** | Symbol value | `:enhanced` = Enhanced, `:diminished` = Diminished, `:normal` = Normal |
+| Protocol Attribute | PIN Encoding | Examples | Notes |
+|-------------------|--------------|----------|-------|
+| **Type** | ASCII letter choice | `K`/`k` = King, `P`/`p` = Pawn | Type is always stored as uppercase symbol (`:K`, `:P`) |
+| **Side** | Letter case in display | `K` = First player, `k` = Second player | Case is determined by side during rendering |
+| **State** | Optional prefix | `+K` = Enhanced, `-K` = Diminished, `K` = Normal | |
+
+**Type Convention**: All piece types are internally represented as uppercase symbols (`:A` to `:Z`). The display case is determined by the `side` attribute: first player pieces display as uppercase, second player pieces as lowercase.
+
+**Canonical principle**: Identical pieces must have identical PIN representations.
 
 **Note**: PIN does not represent the **Style** attribute from the Game Protocol. For style-aware piece notation, see [Piece Name Notation (PNN)](https://sashite.dev/specs/pnn/).
 
@@ -370,9 +414,40 @@ Following the [Game Protocol](https://sashite.dev/game-protocol/):
 * **Rule-Agnostic**: Independent of specific game mechanics
 * **Compact Format**: 1-2 characters per piece
 * **Visual Distinction**: Clear player differentiation through case
+* **Type Normalization**: Consistent uppercase type representation internally
 * **Protocol Compliant**: Direct implementation of Sashité piece attributes
 * **Immutable**: All piece instances are frozen and transformations return new objects
 * **Functional**: Pure functions with no side effects
+
+## Implementation Notes
+
+### Type Normalization Convention
+
+PIN follows a strict type normalization convention:
+
+1. **Internal Storage**: All piece types are stored as uppercase symbols (`:A` to `:Z`)
+2. **Input Flexibility**: Both `"K"` and `"k"` are valid input during parsing
+3. **Case Semantics**: Input case determines the `side` attribute, not the `type`
+4. **Display Logic**: Output case is computed from `side` during rendering
+
+This design ensures:
+- Consistent internal representation regardless of input format
+- Clear separation between piece identity (type) and ownership (side)
+- Predictable behavior when comparing pieces of the same type
+
+### Example Flow
+
+```ruby
+# Input: "k" (lowercase)
+# ↓ Parsing
+# type: :K (normalized to uppercase)
+# side: :second (inferred from lowercase input)
+# ↓ Display
+# letter: "k" (computed from type + side)
+# PIN: "k" (final representation)
+```
+
+This ensures that `parse(pin).to_s == pin` for all valid PIN strings while maintaining internal consistency.
 
 ## System Constraints
 
