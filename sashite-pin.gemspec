@@ -13,7 +13,8 @@ Gem::Specification.new do |spec|
     a modern Ruby interface featuring immutable piece objects and functional programming
     principles. PIN translates piece attributes from the Game Protocol into a compact,
     portable notation system using ASCII letters with optional state modifiers and
-    case-based player group classification.
+    case-based side encoding. Perfect for game engines, board game notation systems,
+    and multi-game environments.
   DESC
 
   spec.homepage               = "https://github.com/sashite/pin.rb"
