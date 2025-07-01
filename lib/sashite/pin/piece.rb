@@ -196,8 +196,7 @@ module Sashite
       # @example
       #   piece.flip  # (:K, :first, :normal) => (:K, :second, :normal)
       def flip
-        new_side = first_player? ? SECOND_PLAYER : FIRST_PLAYER
-        self.class.new(type, new_side, state)
+        self.class.new(type, opposite_side, state)
       end
 
       # Create a new piece with a different type (keeping same side and state)
@@ -369,6 +368,15 @@ module Sashite
       end
 
       private_class_method :match_pattern
+
+      private
+
+      # Get the opposite side of the current piece
+      #
+      # @return [Symbol] :first if current side is :second, :second if current side is :first
+      def opposite_side
+        first_player? ? SECOND_PLAYER : FIRST_PLAYER
+      end
     end
   end
 end
