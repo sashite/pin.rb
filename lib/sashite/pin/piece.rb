@@ -106,6 +106,23 @@ module Sashite
         new(piece_type, piece_side, piece_state)
       end
 
+      # Check if a string is a valid PIN notation
+      #
+      # @param pin_string [String] The string to validate
+      # @return [Boolean] true if valid PIN, false otherwise
+      #
+      # @example
+      #   Sashite::Pin::Piece.valid?("K")    # => true
+      #   Sashite::Pin::Piece.valid?("+R")   # => true
+      #   Sashite::Pin::Piece.valid?("-p")   # => true
+      #   Sashite::Pin::Piece.valid?("KK")   # => false
+      #   Sashite::Pin::Piece.valid?("++K")  # => false
+      def self.valid?(pin_string)
+        return false unless pin_string.is_a?(::String)
+
+        pin_string.match?(PIN_PATTERN)
+      end
+
       # Convert the piece to its PIN string representation
       #
       # @return [String] PIN notation string
@@ -190,9 +207,9 @@ module Sashite
         self.class.new(type, side, NORMAL_STATE)
       end
 
-      # Create a new piece with opposite ownership (case)
+      # Create a new piece with opposite side
       #
-      # @return [Piece] new piece instance with flipped case
+      # @return [Piece] new piece instance with opposite side
       # @example
       #   piece.flip  # (:K, :first, :normal) => (:K, :second, :normal)
       def flip

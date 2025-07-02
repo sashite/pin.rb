@@ -547,12 +547,12 @@ run_test("Regex pattern compliance") do
 end
 
 # Test constants
-run_test("PIN_REGEX constant is correctly defined") do
-  regex = Sashite::Pin::PIN_REGEX
+run_test("Regular expression constant is correctly defined") do
+  regex = Sashite::Pin::Piece::PIN_PATTERN
 
-  raise "PIN_REGEX should match valid PINs" unless "K".match?(regex)
-  raise "PIN_REGEX should match enhanced PINs" unless "+R".match?(regex)
-  raise "PIN_REGEX should not match invalid PINs" if "KK".match?(regex)
+  raise "PIN_PATTERN should match valid PINs" unless "K".match?(regex)
+  raise "PIN_PATTERN should match enhanced PINs" unless "+R".match?(regex)
+  raise "PIN_PATTERN should not match invalid PINs" if "KK".match?(regex)
 end
 
 # Test performance with new API

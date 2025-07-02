@@ -20,13 +20,9 @@ module Sashite
   #
   # See: https://sashite.dev/specs/pin/1.0.0/
   module Pin
-    # Regular expression for PIN validation
-    # Matches: optional state modifier followed by a single letter
-    PIN_REGEX = /\A[-+]?[A-Za-z]\z/
-
     # Check if a string is a valid PIN notation
     #
-    # @param pin [String] The string to validate
+    # @param pin_string [String] The string to validate
     # @return [Boolean] true if valid PIN, false otherwise
     #
     # @example
@@ -35,10 +31,8 @@ module Sashite
     #   Sashite::Pin.valid?("-p")   # => true
     #   Sashite::Pin.valid?("KK")   # => false
     #   Sashite::Pin.valid?("++K")  # => false
-    def self.valid?(pin)
-      return false unless pin.is_a?(::String)
-
-      pin.match?(PIN_REGEX)
+    def self.valid?(pin_string)
+      Piece.valid?(pin_string)
     end
 
     # Parse a PIN string into a Piece object

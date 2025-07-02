@@ -204,6 +204,7 @@ crossed_soldier.to_s                              # => "+P"
 #### Creation and Parsing
 - `Sashite::Pin::Piece.new(type, side, state = :normal)` - Create piece instance
 - `Sashite::Pin::Piece.parse(pin_string)` - Parse PIN string (same as module method)
+- `Sashite::Pin::Piece.valid?(pin_string)` - Validate PIN string (class method)
 
 #### Attribute Access
 - `#type` - Get piece type (symbol :A to :Z, always uppercase)
@@ -258,7 +259,7 @@ piece2.letter  # => "k" (lowercase display)
 - `#==(other)` - Full equality comparison
 
 ### Constants
-- `Sashite::Pin::PIN_REGEX` - Regular expression for PIN validation
+- `Sashite::Pin::Piece::PIN_PATTERN` - Regular expression for PIN validation (internal use)
 
 ## Advanced Usage
 
