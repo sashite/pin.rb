@@ -18,7 +18,7 @@ This gem implements the [PIN Specification v1.0.0](https://sashite.dev/specs/pin
 ```ruby
 # In your Gemfile
 gem "sashite-pin"
-````
+```
 
 Or install manually:
 
