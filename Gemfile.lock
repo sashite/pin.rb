@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    sashite-pin (2.0.2)
+    sashite-pin (3.0.0)
 
 GEM
   remote: https://rubygems.org/
@@ -35,13 +35,13 @@ GEM
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.0)
-    rdoc (6.14.1)
+    rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
-    rubocop (1.77.0)
+    rubocop (1.78.0)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)

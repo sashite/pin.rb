@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "pin/piece"
+require_relative "pin/identifier"
 
 module Sashite
   # PIN (Piece Identifier Notation) implementation for Ruby
@@ -32,35 +32,35 @@ module Sashite
     #   Sashite::Pin.valid?("KK")   # => false
     #   Sashite::Pin.valid?("++K")  # => false
     def self.valid?(pin_string)
-      Piece.valid?(pin_string)
+      Identifier.valid?(pin_string)
     end
 
-    # Parse a PIN string into a Piece object
+    # Parse a PIN string into an Identifier object
     #
     # @param pin_string [String] PIN notation string
-    # @return [Pin::Piece] new piece instance
+    # @return [Pin::Identifier] new identifier instance
     # @raise [ArgumentError] if the PIN string is invalid
     # @example
-    #   Sashite::Pin.parse("K")     # => #<Pin::Piece type=:K side=:first state=:normal>
-    #   Sashite::Pin.parse("+R")    # => #<Pin::Piece type=:R side=:first state=:enhanced>
-    #   Sashite::Pin.parse("-p")    # => #<Pin::Piece type=:P side=:second state=:diminished>
+    #   Sashite::Pin.parse("K")     # => #<Pin::Identifier type=:K side=:first state=:normal>
+    #   Sashite::Pin.parse("+R")    # => #<Pin::Identifier type=:R side=:first state=:enhanced>
+    #   Sashite::Pin.parse("-p")    # => #<Pin::Identifier type=:P side=:second state=:diminished>
     def self.parse(pin_string)
-      Piece.parse(pin_string)
+      Identifier.parse(pin_string)
     end
 
-    # Create a new piece instance
+    # Create a new identifier instance
     #
     # @param type [Symbol] piece type (:A to :Z)
     # @param side [Symbol] player side (:first or :second)
     # @param state [Symbol] piece state (:normal, :enhanced, or :diminished)
-    # @return [Pin::Piece] new piece instance
+    # @return [Pin::Identifier] new identifier instance
     # @raise [ArgumentError] if parameters are invalid
     # @example
-    #   Sashite::Pin.piece(:K, :first, :normal)     # => #<Pin::Piece type=:K side=:first state=:normal>
-    #   Sashite::Pin.piece(:R, :first, :enhanced)   # => #<Pin::Piece type=:R side=:first state=:enhanced>
-    #   Sashite::Pin.piece(:P, :second, :diminished) # => #<Pin::Piece type=:P side=:second state=:diminished>
-    def self.piece(type, side, state = :normal)
-      Piece.new(type, side, state)
+    #   Sashite::Pin.identifier(:K, :first, :normal)     # => #<Pin::Identifier type=:K side=:first state=:normal>
+    #   Sashite::Pin.identifier(:R, :first, :enhanced)   # => #<Pin::Identifier type=:R side=:first state=:enhanced>
+    #   Sashite::Pin.identifier(:P, :second, :diminished) # => #<Pin::Identifier type=:P side=:second state=:diminished>
+    def self.identifier(type, side, state = :normal)
+      Identifier.new(type, side, state)
     end
   end
 end

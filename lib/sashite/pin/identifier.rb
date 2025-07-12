@@ -2,9 +2,9 @@
 
 module Sashite
   module Pin
-    # Represents a piece in PIN (Piece Identifier Notation) format.
+    # Represents an identifier in PIN (Piece Identifier Notation) format.
     #
-    # A piece consists of a single ASCII letter with optional state modifiers:
+    # An identifier consists of a single ASCII letter with optional state modifiers:
     # - Enhanced state: prefix '+'
     # - Diminished state: prefix '-'
     # - Normal state: no modifier
@@ -15,7 +15,7 @@ module Sashite
     #
     # All instances are immutable - state manipulation methods return new instances.
     # This follows the Game Protocol's piece model with Type, Side, and State attributes.
-    class Piece
+    class Identifier
       # PIN validation pattern matching the specification
       PIN_PATTERN = /\A(?<prefix>[-+])?(?<letter>[a-zA-Z])\z/
 
@@ -57,7 +57,7 @@ module Sashite
       # @return [Symbol] the piece state (:normal, :enhanced, or :diminished)
       attr_reader :state
 
-      # Create a new piece instance
+      # Create a new identifier instance
       #
       # @param type [Symbol] piece type (:A to :Z)
       # @param side [Symbol] player side (:first or :second)
@@ -75,15 +75,15 @@ module Sashite
         freeze
       end
 
-      # Parse a PIN string into a Piece object
+      # Parse a PIN string into an Identifier object
       #
       # @param pin_string [String] PIN notation string
-      # @return [Piece] new piece instance
+      # @return [Identifier] new identifier instance
       # @raise [ArgumentError] if the PIN string is invalid
       # @example
-      #   Pin::Piece.parse("k")     # => #<Pin::Piece type=:K side=:second state=:normal>
-      #   Pin::Piece.parse("+R")    # => #<Pin::Piece type=:R side=:first state=:enhanced>
-      #   Pin::Piece.parse("-p")    # => #<Pin::Piece type=:P side=:second state=:diminished>
+      #   Pin::Identifier.parse("k")     # => #<Pin::Identifier type=:K side=:second state=:normal>
+      #   Pin::Identifier.parse("+R")    # => #<Pin::Identifier type=:R side=:first state=:enhanced>
+      #   Pin::Identifier.parse("-p")    # => #<Pin::Identifier type=:P side=:second state=:diminished>
       def self.parse(pin_string)
         string_value = String(pin_string)
         matches = match_pattern(string_value)
@@ -92,18 +92,17 @@ module Sashite
         enhanced = matches[:prefix] == ENHANCED_PREFIX
         diminished = matches[:prefix] == DIMINISHED_PREFIX
 
-        # Extract type and side from letter
-        piece_type = letter.upcase.to_sym
-        piece_side = letter == letter.upcase ? FIRST_PLAYER : SECOND_PLAYER
-        piece_state = if enhanced
-                        ENHANCED_STATE
-                      elsif diminished
-                        DIMINISHED_STATE
-                      else
-                        NORMAL_STATE
-                      end
+        type = letter.upcase.to_sym
+        side = letter == letter.upcase ? FIRST_PLAYER : SECOND_PLAYER
+        state = if enhanced
+                  ENHANCED_STATE
+                elsif diminished
+                  DIMINISHED_STATE
+                else
+                  NORMAL_STATE
+                end
 
-        new(piece_type, piece_side, piece_state)
+        new(type, side, state)
       end
 
       # Check if a string is a valid PIN notation
@@ -112,24 +111,22 @@ module Sashite
       # @return [Boolean] true if valid PIN, false otherwise
       #
       # @example
-      #   Sashite::Pin::Piece.valid?("K")    # => true
-      #   Sashite::Pin::Piece.valid?("+R")   # => true
-      #   Sashite::Pin::Piece.valid?("-p")   # => true
-      #   Sashite::Pin::Piece.valid?("KK")   # => false
-      #   Sashite::Pin::Piece.valid?("++K")  # => false
+      #   Sashite::Pin::Identifier.valid?("K")    # => true
+      #   Sashite::Pin::Identifier.valid?("+R")   # => true
+      #   Sashite::Pin::Identifier.valid?("-p")   # => true
+      #   Sashite::Pin::Identifier.valid?("KK")   # => false
+      #   Sashite::Pin::Identifier.valid?("++K")  # => false
       def self.valid?(pin_string)
         return false unless pin_string.is_a?(::String)
 
         pin_string.match?(PIN_PATTERN)
       end
 
-      # Convert the piece to its PIN string representation
+      # Convert the identifier to its PIN string representation
       #
       # @return [String] PIN notation string
       # @example
-      #   piece.to_s  # => "+R"
-      #   piece.to_s  # => "-p"
-      #   piece.to_s  # => "K"
+      #   identifier.to_s  # => "+R"
       def to_s
         "#{prefix}#{letter}"
       end
@@ -152,76 +149,62 @@ module Sashite
         end
       end
 
-      # Create a new piece with enhanced state
+      # Create a new identifier with enhanced state
       #
-      # @return [Piece] new piece instance with enhanced state
-      # @example
-      #   piece.enhance  # (:K, :first, :normal) => (:K, :first, :enhanced)
+      # @return [Identifier] new identifier instance with enhanced state
       def enhance
         return self if enhanced?
 
         self.class.new(type, side, ENHANCED_STATE)
       end
 
-      # Create a new piece without enhanced state
+      # Create a new identifier without enhanced state
       #
-      # @return [Piece] new piece instance without enhanced state
-      # @example
-      #   piece.unenhance  # (:K, :first, :enhanced) => (:K, :first, :normal)
+      # @return [Identifier] new identifier instance with normal state
       def unenhance
         return self unless enhanced?
 
         self.class.new(type, side, NORMAL_STATE)
       end
 
-      # Create a new piece with diminished state
+      # Create a new identifier with diminished state
       #
-      # @return [Piece] new piece instance with diminished state
-      # @example
-      #   piece.diminish  # (:K, :first, :normal) => (:K, :first, :diminished)
+      # @return [Identifier] new identifier instance with diminished state
       def diminish
         return self if diminished?
 
         self.class.new(type, side, DIMINISHED_STATE)
       end
 
-      # Create a new piece without diminished state
+      # Create a new identifier without diminished state
       #
-      # @return [Piece] new piece instance without diminished state
-      # @example
-      #   piece.undiminish  # (:K, :first, :diminished) => (:K, :first, :normal)
+      # @return [Identifier] new identifier instance with normal state
       def undiminish
         return self unless diminished?
 
         self.class.new(type, side, NORMAL_STATE)
       end
 
-      # Create a new piece with normal state (no modifiers)
+      # Create a new identifier with normal state (no modifiers)
       #
-      # @return [Piece] new piece instance with normal state
-      # @example
-      #   piece.normalize  # (:K, :first, :enhanced) => (:K, :first, :normal)
+      # @return [Identifier] new identifier instance with normal state
       def normalize
         return self if normal?
 
         self.class.new(type, side, NORMAL_STATE)
       end
 
-      # Create a new piece with opposite side
+      # Create a new identifier with opposite side
       #
-      # @return [Piece] new piece instance with opposite side
-      # @example
-      #   piece.flip  # (:K, :first, :normal) => (:K, :second, :normal)
+      # @return [Identifier] new identifier instance with opposite side
       def flip
         self.class.new(type, opposite_side, state)
       end
 
-      # Create a new piece with a different type (keeping same side and state)
+      # Create a new identifier with a different type
       #
       # @param new_type [Symbol] new type (:A to :Z)
-      # @return [Piece] new piece instance with different type
-      # @example
-      #   piece.with_type(:Q)  # (:K, :first, :normal) => (:Q, :first, :normal)
+      # @return [Identifier] new identifier instance with new type
       def with_type(new_type)
         self.class.validate_type(new_type)
         return self if type == new_type
@@ -229,12 +212,10 @@ module Sashite
         self.class.new(new_type, side, state)
       end
 
-      # Create a new piece with a different side (keeping same type and state)
+      # Create a new identifier with a different side
       #
-      # @param new_side [Symbol] :first or :second
-      # @return [Piece] new piece instance with different side
-      # @example
-      #   piece.with_side(:second)  # (:K, :first, :normal) => (:K, :second, :normal)
+      # @param new_side [Symbol] new side (:first or :second)
+      # @return [Identifier] new identifier instance with new side
       def with_side(new_side)
         self.class.validate_side(new_side)
         return self if side == new_side
@@ -242,12 +223,10 @@ module Sashite
         self.class.new(type, new_side, state)
       end
 
-      # Create a new piece with a different state (keeping same type and side)
+      # Create a new identifier with a different state
       #
-      # @param new_state [Symbol] :normal, :enhanced, or :diminished
-      # @return [Piece] new piece instance with different state
-      # @example
-      #   piece.with_state(:enhanced)  # (:K, :first, :normal) => (:K, :first, :enhanced)
+      # @param new_state [Symbol] new state (:normal, :enhanced, or :diminished)
+      # @return [Identifier] new identifier instance with new state
       def with_state(new_state)
         self.class.validate_state(new_state)
         return self if state == new_state
@@ -255,56 +234,54 @@ module Sashite
         self.class.new(type, side, new_state)
       end
 
-      # Check if the piece has enhanced state
+      # Check if the identifier has enhanced state
       #
       # @return [Boolean] true if enhanced
       def enhanced?
         state == ENHANCED_STATE
       end
 
-      # Check if the piece has diminished state
+      # Check if the identifier has diminished state
       #
       # @return [Boolean] true if diminished
       def diminished?
         state == DIMINISHED_STATE
       end
 
-      # Check if the piece has normal state (no modifiers)
+      # Check if the identifier has normal state
       #
-      # @return [Boolean] true if no modifiers are present
+      # @return [Boolean] true if normal
       def normal?
         state == NORMAL_STATE
       end
 
-      # Check if the piece belongs to the first player
+      # Check if the identifier belongs to the first player
       #
       # @return [Boolean] true if first player
       def first_player?
         side == FIRST_PLAYER
       end
 
-      # Check if the piece belongs to the second player
+      # Check if the identifier belongs to the second player
       #
       # @return [Boolean] true if second player
       def second_player?
         side == SECOND_PLAYER
       end
 
-      # Check if this piece is the same type as another (ignoring side and state)
+      # Check if this identifier is the same type as another
       #
-      # @param other [Piece] piece to compare with
+      # @param other [Identifier] identifier to compare with
       # @return [Boolean] true if same type
-      # @example
-      #   king1.same_type?(king2)  # (:K, :first, :normal) and (:K, :second, :enhanced) => true
       def same_type?(other)
         return false unless other.is_a?(self.class)
 
         type == other.type
       end
 
-      # Check if this piece belongs to the same side as another
+      # Check if this identifier has the same side as another
       #
-      # @param other [Piece] piece to compare with
+      # @param other [Identifier] identifier to compare with
       # @return [Boolean] true if same side
       def same_side?(other)
         return false unless other.is_a?(self.class)
@@ -312,9 +289,9 @@ module Sashite
         side == other.side
       end
 
-      # Check if this piece has the same state as another
+      # Check if this identifier has the same state as another
       #
-      # @param other [Piece] piece to compare with
+      # @param other [Identifier] identifier to compare with
       # @return [Boolean] true if same state
       def same_state?(other)
         return false unless other.is_a?(self.class)
@@ -325,7 +302,7 @@ module Sashite
       # Custom equality comparison
       #
       # @param other [Object] object to compare with
-      # @return [Boolean] true if pieces are equal
+      # @return [Boolean] true if identifiers are equal
       def ==(other)
         return false unless other.is_a?(self.class)
 
@@ -388,7 +365,7 @@ module Sashite
 
       private
 
-      # Get the opposite side of the current piece
+      # Get the opposite side of the current identifier
       #
       # @return [Symbol] :first if current side is :second, :second if current side is :first
       def opposite_side

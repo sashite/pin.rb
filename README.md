@@ -11,14 +11,14 @@
 
 PIN (Piece Identifier Notation) provides an ASCII-based format for representing pieces in abstract strategy board games. PIN translates piece attributes from the [Game Protocol](https://sashite.dev/game-protocol/) into a compact, portable notation system.
 
-This gem implements the [PIN Specification v1.0.0](https://sashite.dev/specs/pin/1.0.0/), providing a modern Ruby interface with immutable piece objects and functional programming principles.
+This gem implements the [PIN Specification v1.0.0](https://sashite.dev/specs/pin/1.0.0/), providing a modern Ruby interface with immutable identifier objects and functional programming principles.
 
 ## Installation
 
 ```ruby
 # In your Gemfile
 gem "sashite-pin"
-```
+````
 
 Or install manually:
 
@@ -31,16 +31,16 @@ gem install sashite-pin
 ```ruby
 require "sashite/pin"
 
-# Parse PIN strings into piece objects
-piece = Sashite::Pin.parse("K")          # => #<Pin::Piece type=:K side=:first state=:normal>
-piece.to_s                               # => "K"
-piece.type                               # => :K
-piece.side                               # => :first
-piece.state                              # => :normal
+# Parse PIN strings into identifier objects
+identifier = Sashite::Pin.parse("K")          # => #<Pin::Identifier type=:K side=:first state=:normal>
+identifier.to_s                               # => "K"
+identifier.type                               # => :K
+identifier.side                               # => :first
+identifier.state                              # => :normal
 
-# Create pieces directly
-piece = Sashite::Pin.piece(:K, :first, :normal)    # => #<Pin::Piece type=:K side=:first state=:normal>
-piece = Sashite::Pin::Piece.new(:R, :second, :enhanced)  # => #<Pin::Piece type=:R side=:second state=:enhanced>
+# Create identifiers directly
+identifier = Sashite::Pin.identifier(:K, :first, :normal)    # => #<Pin::Identifier type=:K side=:first state=:normal>
+identifier = Sashite::Pin::Identifier.new(:R, :second, :enhanced)  # => #<Pin::Identifier type=:R side=:second state=:enhanced>
 
 # Validate PIN strings
 Sashite::Pin.valid?("K")                 # => true
@@ -48,171 +48,104 @@ Sashite::Pin.valid?("+R")                # => true
 Sashite::Pin.valid?("invalid")           # => false
 
 # State manipulation (returns new immutable instances)
-enhanced = piece.enhance                 # => #<Pin::Piece type=:K side=:first state=:enhanced>
-enhanced.to_s                            # => "+K"
-diminished = piece.diminish              # => #<Pin::Piece type=:K side=:first state=:diminished>
-diminished.to_s                          # => "-K"
+enhanced = identifier.enhance                 # => #<Pin::Identifier type=:K side=:first state=:enhanced>
+enhanced.to_s                                 # => "+K"
+diminished = identifier.diminish              # => #<Pin::Identifier type=:K side=:first state=:diminished>
+diminished.to_s                               # => "-K"
 
 # Side manipulation
-flipped = piece.flip                     # => #<Pin::Piece type=:K side=:second state=:normal>
-flipped.to_s                             # => "k"
+flipped = identifier.flip                     # => #<Pin::Identifier type=:K side=:second state=:normal>
+flipped.to_s                                  # => "k"
 
 # Type manipulation
-queen = piece.with_type(:Q)              # => #<Pin::Piece type=:Q side=:first state=:normal>
-queen.to_s                               # => "Q"
+queen = identifier.with_type(:Q)              # => #<Pin::Identifier type=:Q side=:first state=:normal>
+queen.to_s                                    # => "Q"
 
 # State queries
-piece.normal?                            # => true
-enhanced.enhanced?                       # => true
-diminished.diminished?                   # => true
+identifier.normal?                            # => true
+enhanced.enhanced?                            # => true
+diminished.diminished?                        # => true
 
 # Side queries
-piece.first_player?                      # => true
-flipped.second_player?                   # => true
+identifier.first_player?                      # => true
+flipped.second_player?                        # => true
 
 # Attribute access
-piece.letter                             # => "K"
-enhanced.prefix                          # => "+"
-piece.prefix                             # => ""
+identifier.letter                             # => "K"
+enhanced.prefix                               # => "+"
+identifier.prefix                             # => ""
 
 # Type and side comparison
 king1 = Sashite::Pin.parse("K")
 king2 = Sashite::Pin.parse("k")
 queen = Sashite::Pin.parse("Q")
 
-king1.same_type?(king2)                  # => true (both kings)
-king1.same_side?(queen)                  # => true (both first player)
-king1.same_type?(queen)                  # => false (different types)
+king1.same_type?(king2)                       # => true (both kings)
+king1.same_side?(queen)                       # => true (both first player)
+king1.same_type?(queen)                       # => false (different types)
 
 # Functional transformations can be chained
 pawn = Sashite::Pin.parse("P")
-enemy_promoted = pawn.flip.enhance       # => "+p" (second player promoted pawn)
+enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted pawn)
 ```
 
 ## Format Specification
 
 ### Structure
+
 ```
 [<state>]<letter>
 ```
 
 ### Components
 
-- **Letter** (`A-Z`, `a-z`): Represents piece type and side
-  - Uppercase: First player pieces
-  - Lowercase: Second player pieces
-- **State** (optional prefix):
-  - `+`: Enhanced state (promoted, upgraded, empowered)
-  - `-`: Diminished state (weakened, restricted, temporary)
-  - No prefix: Normal state
+* **Letter** (`A-Z`, `a-z`): Represents piece type and side
+
+  * Uppercase: First player pieces
+  * Lowercase: Second player pieces
+* **State** (optional prefix):
+
+  * `+`: Enhanced state (promoted, upgraded, empowered)
+  * `-`: Diminished state (weakened, restricted, temporary)
+  * No prefix: Normal state
 
 ### Regular Expression
+
 ```ruby
 /\A[-+]?[A-Za-z]\z/
 ```
 
 ### Examples
-- `K` - First player king (normal state)
-- `k` - Second player king (normal state)
-- `+R` - First player rook (enhanced state)
-- `-p` - Second player pawn (diminished state)
 
-## Game Examples
-
-### Western Chess
-```ruby
-# Standard pieces
-king = Sashite::Pin.piece(:K, :first, :normal)    # => white king
-king.first_player?                                # => true
-king.type                                         # => :K
-
-# State modifiers for special conditions
-castling_king = king.enhance                      # => castling-eligible king
-castling_king.to_s                                # => "+K"
-
-vulnerable_pawn = Sashite::Pin.piece(:P, :first, :diminished)  # => en passant vulnerable
-vulnerable_pawn.to_s                              # => "-P"
-
-# All piece types
-piece_types = [:K, :Q, :R, :B, :N, :P]
-white_pieces = piece_types.map { |type| Sashite::Pin.piece(type, :first, :normal) }
-black_pieces = white_pieces.map(&:flip)           # Convert to black pieces
-```
-
-### Japanese Chess (Shōgi)
-```ruby
-# Basic pieces
-rook = Sashite::Pin.piece(:R, :first, :normal)    # => white rook
-bishop = Sashite::Pin.piece(:B, :first, :normal)  # => white bishop
-
-# Promoted pieces (enhanced state)
-dragon_king = rook.enhance                        # => promoted rook (Dragon King)
-dragon_king.to_s                                  # => "+R"
-
-dragon_horse = bishop.enhance                     # => promoted bishop (Dragon Horse)
-dragon_horse.to_s                                 # => "+B"
-
-# Promoted pawn
-pawn = Sashite::Pin.piece(:P, :first, :normal)
-tokin = pawn.enhance                              # => promoted pawn (Tokin)
-tokin.to_s                                        # => "+P"
-
-# All promotable pieces can use the same pattern
-promotable_types = [:R, :B, :S, :N, :L, :P]
-promotable = promotable_types.map { |type| Sashite::Pin.piece(type, :first, :normal) }
-promoted = promotable.map(&:enhance)
-```
-
-### Thai Chess (Makruk)
-```ruby
-# Basic pieces
-met = Sashite::Pin.piece(:M, :first, :normal)     # => white Met (queen)
-pawn = Sashite::Pin.piece(:P, :first, :normal)    # => white Bia (pawn)
-
-# Promoted pawns
-bia_kaew = pawn.enhance                           # => promoted pawn (Bia Kaew)
-bia_kaew.to_s                                     # => "+P"
-
-# Makruk pieces
-makruk_types = [:K, :M, :R, :B, :N, :P]
-makruk_pieces = makruk_types.map { |type| Sashite::Pin.piece(type, :first, :normal) }
-```
-
-### Chinese Chess (Xiangqi)
-```ruby
-# Pieces with positional states
-general = Sashite::Pin.piece(:G, :first, :normal) # => red general
-flying_general = general.enhance                  # => flying general (special state)
-flying_general.to_s                               # => "+G"
-
-# Soldiers that crossed the river
-soldier = Sashite::Pin.piece(:P, :first, :normal)
-crossed_soldier = soldier.enhance                 # => soldier with enhanced movement
-crossed_soldier.to_s                              # => "+P"
-```
+* `K` - First player king (normal state)
+* `k` - Second player king (normal state)
+* `+R` - First player rook (enhanced state)
+* `-p` - Second player pawn (diminished state)
 
 ## API Reference
 
 ### Main Module Methods
 
-- `Sashite::Pin.valid?(pin_string)` - Check if string is valid PIN notation
-- `Sashite::Pin.parse(pin_string)` - Parse PIN string into Piece object
-- `Sashite::Pin.piece(type, side, state = :normal)` - Create piece instance directly
+* `Sashite::Pin.valid?(pin_string)` - Check if string is valid PIN notation
+* `Sashite::Pin.parse(pin_string)` - Parse PIN string into Identifier object
+* `Sashite::Pin.identifier(type, side, state = :normal)` - Create identifier instance directly
 
-### Piece Class
+### Identifier Class
 
 #### Creation and Parsing
-- `Sashite::Pin::Piece.new(type, side, state = :normal)` - Create piece instance
-- `Sashite::Pin::Piece.parse(pin_string)` - Parse PIN string (same as module method)
-- `Sashite::Pin::Piece.valid?(pin_string)` - Validate PIN string (class method)
+
+* `Sashite::Pin::Identifier.new(type, side, state = :normal)` - Create identifier instance
+* `Sashite::Pin::Identifier.parse(pin_string)` - Parse PIN string (same as module method)
+* `Sashite::Pin::Identifier.valid?(pin_string)` - Validate PIN string (class method)
 
 #### Attribute Access
-- `#type` - Get piece type (symbol :A to :Z, always uppercase)
-- `#side` - Get player side (:first or :second)
-- `#state` - Get state (:normal, :enhanced, or :diminished)
-- `#letter` - Get letter representation (string, case determined by side)
-- `#prefix` - Get state prefix (string: "+", "-", or "")
-- `#to_s` - Convert to PIN string representation
+
+* `#type` - Get piece type (symbol \:A to \:Z, always uppercase)
+* `#side` - Get player side (\:first or \:second)
+* `#state` - Get state (\:normal, \:enhanced, or \:diminished)
+* `#letter` - Get letter representation (string, case determined by side)
+* `#prefix` - Get state prefix (string: "+", "-", or "")
+* `#to_s` - Convert to PIN string representation
 
 #### Type and Case Handling
 
@@ -220,46 +153,52 @@ crossed_soldier.to_s                              # => "+P"
 
 ```ruby
 # Both create the same internal type representation
-piece1 = Sashite::Pin.parse("K")  # type: :K, side: :first
-piece2 = Sashite::Pin.parse("k")  # type: :K, side: :second
+identifier1 = Sashite::Pin.parse("K")  # type: :K, side: :first
+identifier2 = Sashite::Pin.parse("k")  # type: :K, side: :second
 
-piece1.type    # => :K (uppercase symbol)
-piece2.type    # => :K (same uppercase symbol)
+identifier1.type    # => :K (uppercase symbol)
+identifier2.type    # => :K (same uppercase symbol)
 
-piece1.letter  # => "K" (uppercase display)
-piece2.letter  # => "k" (lowercase display)
+identifier1.letter  # => "K" (uppercase display)
+identifier2.letter  # => "k" (lowercase display)
 ```
 
 #### State Queries
-- `#normal?` - Check if normal state (no modifiers)
-- `#enhanced?` - Check if enhanced state
-- `#diminished?` - Check if diminished state
+
+* `#normal?` - Check if normal state (no modifiers)
+* `#enhanced?` - Check if enhanced state
+* `#diminished?` - Check if diminished state
 
 #### Side Queries
-- `#first_player?` - Check if first player piece
-- `#second_player?` - Check if second player piece
+
+* `#first_player?` - Check if first player identifier
+* `#second_player?` - Check if second player identifier
 
 #### State Transformations (immutable - return new instances)
-- `#enhance` - Create enhanced version
-- `#unenhance` - Remove enhanced state
-- `#diminish` - Create diminished version
-- `#undiminish` - Remove diminished state
-- `#normalize` - Remove all state modifiers
-- `#flip` - Switch player (change side)
+
+* `#enhance` - Create enhanced version
+* `#unenhance` - Remove enhanced state
+* `#diminish` - Create diminished version
+* `#undiminish` - Remove diminished state
+* `#normalize` - Remove all state modifiers
+* `#flip` - Switch player (change side)
 
 #### Attribute Transformations (immutable - return new instances)
-- `#with_type(new_type)` - Create piece with different type
-- `#with_side(new_side)` - Create piece with different side
-- `#with_state(new_state)` - Create piece with different state
+
+* `#with_type(new_type)` - Create identifier with different type
+* `#with_side(new_side)` - Create identifier with different side
+* `#with_state(new_state)` - Create identifier with different state
 
 #### Comparison Methods
-- `#same_type?(other)` - Check if same piece type
-- `#same_side?(other)` - Check if same side
-- `#same_state?(other)` - Check if same state
-- `#==(other)` - Full equality comparison
+
+* `#same_type?(other)` - Check if same piece type
+* `#same_side?(other)` - Check if same side
+* `#same_state?(other)` - Check if same state
+* `#==(other)` - Full equality comparison
 
 ### Constants
-- `Sashite::Pin::Piece::PIN_PATTERN` - Regular expression for PIN validation (internal use)
+
+* `Sashite::Pin::Identifier::PIN_PATTERN` - Regular expression for PIN validation (internal use)
 
 ## Advanced Usage
 

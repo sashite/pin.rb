@@ -3,7 +3,7 @@
 # Tests for Sashite::Pin (Piece Identifier Notation)
 #
 # Tests the PIN implementation for Ruby, focusing on the modern object-oriented API
-# with the Piece class using symbol-based attributes and the minimal module interface.
+# with the Identifier class using symbol-based attributes and the minimal module interface.
 
 require_relative "lib/sashite-pin"
 require "set"
@@ -59,26 +59,26 @@ run_test("Module PIN validation handles non-string input") do
 end
 
 # Test module parse method delegates to Piece
-run_test("Module parse delegates to Piece class") do
+run_test("Module parse delegates to Identifier class") do
   pin_string = "+R"
   piece = Sashite::Pin.parse(pin_string)
 
-  raise "parse should return Piece instance" unless piece.is_a?(Sashite::Pin::Piece)
+  raise "parse should return Piece instance" unless piece.is_a?(Sashite::Pin::Identifier)
   raise "piece should have correct PIN string" unless piece.to_s == pin_string
 end
 
 # Test module piece factory method
 run_test("Module piece factory method creates correct instances") do
-  piece = Sashite::Pin.piece(:K, :first, :enhanced)
+  piece = Sashite::Pin.identifier(:K, :first, :enhanced)
 
-  raise "piece factory should return Piece instance" unless piece.is_a?(Sashite::Pin::Piece)
+  raise "piece factory should return Piece instance" unless piece.is_a?(Sashite::Pin::Identifier)
   raise "piece should have correct type" unless piece.type == :K
   raise "piece should have correct side" unless piece.side == :first
   raise "piece should have correct state" unless piece.state == :enhanced
   raise "piece should have correct PIN string" unless piece.to_s == "+K"
 end
 
-# Test the Piece class with new symbol-based API
+# Test the Identifier class with new symbol-based API
 run_test("Piece.parse creates correct instances with symbol attributes") do
   test_cases = {
     "K" => { type: :K, side: :first, state: :normal, letter: "K" },
@@ -106,7 +106,7 @@ run_test("Piece constructor with symbol parameters") do
   ]
 
   test_cases.each do |type, side, state, expected_pin|
-    piece = Sashite::Pin::Piece.new(type, side, state)
+    piece = Sashite::Pin::Identifier.new(type, side, state)
 
     raise "type should be #{type}" unless piece.type == type
     raise "side should be #{side}" unless piece.side == side
@@ -124,7 +124,7 @@ run_test("Piece to_s returns correct PIN string") do
   ]
 
   test_cases.each do |type, side, state, expected|
-    piece = Sashite::Pin::Piece.new(type, side, state)
+    piece = Sashite::Pin::Identifier.new(type, side, state)
     result = piece.to_s
 
     raise "#{type}, #{side}, #{state} should be #{expected}, got #{result}" unless result == expected
@@ -149,7 +149,7 @@ run_test("Piece letter and prefix methods") do
 end
 
 run_test("Piece state mutations return new instances") do
-  piece = Sashite::Pin::Piece.new(:K, :first, :normal)
+  piece = Sashite::Pin::Identifier.new(:K, :first, :normal)
 
   # Test enhance
   enhanced = piece.enhance
@@ -175,7 +175,7 @@ run_test("Piece state mutations return new instances") do
 end
 
 run_test("Piece attribute transformations") do
-  piece = Sashite::Pin::Piece.new(:K, :first, :normal)
+  piece = Sashite::Pin::Identifier.new(:K, :first, :normal)
 
   # Test with_type
   queen = piece.with_type(:Q)
@@ -197,7 +197,7 @@ run_test("Piece attribute transformations") do
 end
 
 run_test("Piece immutability") do
-  piece = Sashite::Pin::Piece.new(:R, :first, :enhanced)
+  piece = Sashite::Pin::Identifier.new(:R, :first, :enhanced)
 
   # Test that piece is frozen
   raise "piece should be frozen" unless piece.frozen?
@@ -211,10 +211,10 @@ run_test("Piece immutability") do
 end
 
 run_test("Piece equality and hash") do
-  piece1 = Sashite::Pin::Piece.new(:K, :first, :normal)
-  piece2 = Sashite::Pin::Piece.new(:K, :first, :normal)
-  piece3 = Sashite::Pin::Piece.new(:K, :second, :normal)
-  piece4 = Sashite::Pin::Piece.new(:K, :first, :enhanced)
+  piece1 = Sashite::Pin::Identifier.new(:K, :first, :normal)
+  piece2 = Sashite::Pin::Identifier.new(:K, :first, :normal)
+  piece3 = Sashite::Pin::Identifier.new(:K, :second, :normal)
+  piece4 = Sashite::Pin::Identifier.new(:K, :first, :enhanced)
 
   # Test equality
   raise "identical pieces should be equal" unless piece1 == piece2
@@ -248,10 +248,10 @@ run_test("Piece type and side identification") do
 end
 
 run_test("Piece same_type?, same_side?, and same_state? methods") do
-  king1 = Sashite::Pin::Piece.new(:K, :first, :normal)
-  king2 = Sashite::Pin::Piece.new(:K, :second, :enhanced)
-  queen = Sashite::Pin::Piece.new(:Q, :first, :normal)
-  enhanced_queen = Sashite::Pin::Piece.new(:Q, :second, :enhanced)
+  king1 = Sashite::Pin::Identifier.new(:K, :first, :normal)
+  king2 = Sashite::Pin::Identifier.new(:K, :second, :enhanced)
+  queen = Sashite::Pin::Identifier.new(:Q, :first, :normal)
+  enhanced_queen = Sashite::Pin::Identifier.new(:Q, :second, :enhanced)
 
   # same_type? tests
   raise "K and K should be same type" unless king1.same_type?(king2)
@@ -268,9 +268,9 @@ run_test("Piece same_type?, same_side?, and same_state? methods") do
 end
 
 run_test("Piece state methods") do
-  normal = Sashite::Pin::Piece.new(:K, :first, :normal)
-  enhanced = Sashite::Pin::Piece.new(:K, :first, :enhanced)
-  diminished = Sashite::Pin::Piece.new(:K, :first, :diminished)
+  normal = Sashite::Pin::Identifier.new(:K, :first, :normal)
+  enhanced = Sashite::Pin::Identifier.new(:K, :first, :enhanced)
+  diminished = Sashite::Pin::Identifier.new(:K, :first, :diminished)
 
   # Test state identification
   raise "normal piece should be normal" unless normal.normal?
@@ -288,9 +288,9 @@ run_test("Piece state methods") do
 end
 
 run_test("Piece transformation methods return self when appropriate") do
-  normal_piece = Sashite::Pin::Piece.new(:K, :first, :normal)
-  enhanced_piece = Sashite::Pin::Piece.new(:K, :first, :enhanced)
-  diminished_piece = Sashite::Pin::Piece.new(:K, :first, :diminished)
+  normal_piece = Sashite::Pin::Identifier.new(:K, :first, :normal)
+  enhanced_piece = Sashite::Pin::Identifier.new(:K, :first, :enhanced)
+  diminished_piece = Sashite::Pin::Identifier.new(:K, :first, :diminished)
 
   # Test methods that should return self
   raise "unenhance on normal piece should return self" unless normal_piece.unenhance.equal?(normal_piece)
@@ -306,7 +306,7 @@ run_test("Piece transformation methods return self when appropriate") do
 end
 
 run_test("Piece transformation chains") do
-  piece = Sashite::Pin::Piece.new(:K, :first, :normal)
+  piece = Sashite::Pin::Identifier.new(:K, :first, :normal)
 
   # Test enhance then unenhance
   enhanced = piece.enhance
@@ -330,7 +330,7 @@ run_test("Piece error handling for invalid symbols") do
 
   invalid_types.each do |type|
     begin
-      Sashite::Pin::Piece.new(type, :first, :normal)
+      Sashite::Pin::Identifier.new(type, :first, :normal)
       raise "Should have raised error for invalid type #{type.inspect}"
     rescue ArgumentError => e
       raise "Error message should mention invalid type" unless e.message.include?("Type must be")
@@ -342,7 +342,7 @@ run_test("Piece error handling for invalid symbols") do
 
   invalid_sides.each do |side|
     begin
-      Sashite::Pin::Piece.new(:K, side, :normal)
+      Sashite::Pin::Identifier.new(:K, side, :normal)
       raise "Should have raised error for invalid side #{side.inspect}"
     rescue ArgumentError => e
       raise "Error message should mention invalid side" unless e.message.include?("Side must be")
@@ -354,7 +354,7 @@ run_test("Piece error handling for invalid symbols") do
 
   invalid_states.each do |state|
     begin
-      Sashite::Pin::Piece.new(:K, :first, state)
+      Sashite::Pin::Identifier.new(:K, :first, state)
       raise "Should have raised error for invalid state #{state.inspect}"
     rescue ArgumentError => e
       raise "Error message should mention invalid state" unless e.message.include?("State must be")
@@ -379,7 +379,7 @@ end
 # Test game-specific examples with new API
 run_test("Western Chess pieces with new API") do
   # Standard pieces
-  king = Sashite::Pin.piece(:K, :first, :normal)
+  king = Sashite::Pin.identifier(:K, :first, :normal)
   raise "King should be first player" unless king.first_player?
   raise "King type should be :K" unless king.type == :K
 
@@ -388,7 +388,7 @@ run_test("Western Chess pieces with new API") do
   raise "Castling king should be enhanced" unless castling_king.enhanced?
   raise "Castling king PIN should be +K" unless castling_king.to_s == "+K"
 
-  pawn = Sashite::Pin.piece(:P, :first, :normal)
+  pawn = Sashite::Pin.identifier(:P, :first, :normal)
   vulnerable_pawn = pawn.diminish
   raise "Vulnerable pawn should be diminished" unless vulnerable_pawn.diminished?
   raise "Vulnerable pawn PIN should be -P" unless vulnerable_pawn.to_s == "-P"
@@ -396,8 +396,8 @@ end
 
 run_test("Japanese Chess (Shōgi) pieces with new API") do
   # Basic pieces
-  rook = Sashite::Pin.piece(:R, :first, :normal)
-  bishop = Sashite::Pin.piece(:B, :first, :normal)
+  rook = Sashite::Pin.identifier(:R, :first, :normal)
+  bishop = Sashite::Pin.identifier(:B, :first, :normal)
 
   # Promoted pieces
   dragon_king = rook.enhance
@@ -409,7 +409,7 @@ run_test("Japanese Chess (Shōgi) pieces with new API") do
   raise "Dragon Horse PIN should be +B" unless dragon_horse.to_s == "+B"
 
   # Promoted pawn (Tokin)
-  pawn = Sashite::Pin.piece(:P, :first, :normal)
+  pawn = Sashite::Pin.identifier(:P, :first, :normal)
   tokin = pawn.enhance
   raise "Tokin should be enhanced pawn" unless tokin.enhanced? && tokin.type == :P
   raise "Tokin PIN should be +P" unless tokin.to_s == "+P"
@@ -417,7 +417,7 @@ end
 
 run_test("Cross-game piece transformations with new API") do
   # Test that pieces can be transformed across different contexts
-  piece = Sashite::Pin.piece(:K, :first, :normal)
+  piece = Sashite::Pin.identifier(:K, :first, :normal)
 
   # Chain transformations
   transformed = piece.flip.enhance.flip.diminish
@@ -430,10 +430,10 @@ end
 # Test practical usage scenarios with new API
 run_test("Practical usage - piece collections with new API") do
   pieces = [
-    Sashite::Pin.piece(:K, :first, :normal),
-    Sashite::Pin.piece(:Q, :first, :normal),
-    Sashite::Pin.piece(:R, :first, :enhanced),
-    Sashite::Pin.piece(:K, :second, :normal)
+    Sashite::Pin.identifier(:K, :first, :normal),
+    Sashite::Pin.identifier(:Q, :first, :normal),
+    Sashite::Pin.identifier(:R, :first, :enhanced),
+    Sashite::Pin.identifier(:K, :second, :normal)
   ]
 
   # Filter by side
@@ -452,7 +452,7 @@ end
 
 run_test("Practical usage - game state simulation with new API") do
   # Simulate promoting a pawn
-  pawn = Sashite::Pin.piece(:P, :first, :normal)
+  pawn = Sashite::Pin.identifier(:P, :first, :normal)
   raise "Pawn should be normal initially" unless pawn.normal?
 
   # Promote to queen using with_type and enhance
@@ -476,13 +476,13 @@ run_test("Edge case - all letters of alphabet with new API") do
     type_symbol = letter.to_sym
 
     # Test first player
-    piece1 = Sashite::Pin.piece(type_symbol, :first, :normal)
+    piece1 = Sashite::Pin.identifier(type_symbol, :first, :normal)
     raise "#{letter} should create valid piece" unless piece1.type == type_symbol
     raise "#{letter} should be first player" unless piece1.first_player?
     raise "#{letter} should have correct letter" unless piece1.letter == letter
 
     # Test second player
-    piece2 = Sashite::Pin.piece(type_symbol, :second, :normal)
+    piece2 = Sashite::Pin.identifier(type_symbol, :second, :normal)
     raise "#{letter} should create valid piece" unless piece2.type == type_symbol
     raise "#{letter} should be second player" unless piece2.second_player?
     raise "#{letter} should have correct letter" unless piece2.letter == letter.downcase
@@ -548,7 +548,7 @@ end
 
 # Test constants
 run_test("Regular expression constant is correctly defined") do
-  regex = Sashite::Pin::Piece::PIN_PATTERN
+  regex = Sashite::Pin::Identifier::PIN_PATTERN
 
   raise "PIN_PATTERN should match valid PINs" unless "K".match?(regex)
   raise "PIN_PATTERN should match enhanced PINs" unless "+R".match?(regex)
@@ -559,7 +559,7 @@ end
 run_test("Performance - repeated operations with new API") do
   # Test performance with many repeated calls
   1000.times do
-    piece = Sashite::Pin.piece(:K, :first, :normal)
+    piece = Sashite::Pin.identifier(:K, :first, :normal)
     enhanced = piece.enhance
     flipped = piece.flip
     queen = piece.with_type(:Q)
@@ -572,8 +572,8 @@ run_test("Performance - repeated operations with new API") do
 end
 
 # Test constants and validation
-run_test("Piece class constants are properly defined") do
-  piece_class = Sashite::Pin::Piece
+run_test("Identifier class constants are properly defined") do
+  piece_class = Sashite::Pin::Identifier
 
   # Test state constants
   raise "NORMAL_STATE should be :normal" unless piece_class::NORMAL_STATE == :normal
@@ -601,7 +601,7 @@ run_test("Roundtrip parsing consistency") do
 
   test_cases.each do |type, side, state|
     # Create piece -> to_s -> parse -> compare
-    original = Sashite::Pin::Piece.new(type, side, state)
+    original = Sashite::Pin::Identifier.new(type, side, state)
     pin_string = original.to_s
     parsed = Sashite::Pin.parse(pin_string)
 
