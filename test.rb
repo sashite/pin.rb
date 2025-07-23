@@ -1,5 +1,10 @@
 # frozen_string_literal: true
 
+require "simplecov"
+
+SimpleCov.command_name "Unit Tests"
+SimpleCov.start
+
 # Tests for Sashite::Pin (Piece Identifier Notation)
 #
 # Tests the PIN implementation for Ruby, focusing on the modern object-oriented API

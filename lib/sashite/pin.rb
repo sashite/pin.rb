@@ -18,7 +18,7 @@ module Sashite
   #   "+R" - First player rook (enhanced state)
   #   "-p" - Second player pawn (diminished state)
   #
-  # See: https://sashite.dev/specs/pin/1.0.0/
+  # @see https://sashite.dev/specs/pin/1.0.0/
   module Pin
     # Check if a string is a valid PIN notation
     #
@@ -59,7 +59,7 @@ module Sashite
     #   Sashite::Pin.identifier(:K, :first, :normal)     # => #<Pin::Identifier type=:K side=:first state=:normal>
     #   Sashite::Pin.identifier(:R, :first, :enhanced)   # => #<Pin::Identifier type=:R side=:first state=:enhanced>
     #   Sashite::Pin.identifier(:P, :second, :diminished) # => #<Pin::Identifier type=:P side=:second state=:diminished>
-    def self.identifier(type, side, state = :normal)
+    def self.identifier(type, side, state)
       Identifier.new(type, side, state)
     end
   end
