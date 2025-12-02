@@ -53,14 +53,16 @@ module Sashite
     # @param type [Symbol] piece type (:A to :Z)
     # @param side [Symbol] player side (:first or :second)
     # @param state [Symbol] piece state (:normal, :enhanced, or :diminished)
+    # @param terminal [Boolean] whether the piece is a terminal piece
     # @return [Pin::Identifier] new identifier instance
     # @raise [ArgumentError] if parameters are invalid
     # @example
-    #   Sashite::Pin.identifier(:K, :first, :normal)     # => #<Pin::Identifier type=:K side=:first state=:normal>
-    #   Sashite::Pin.identifier(:R, :first, :enhanced)   # => #<Pin::Identifier type=:R side=:first state=:enhanced>
-    #   Sashite::Pin.identifier(:P, :second, :diminished) # => #<Pin::Identifier type=:P side=:second state=:diminished>
-    def self.identifier(type, side, state)
-      Identifier.new(type, side, state)
+    #   Sashite::Pin.identifier(:K, :first, :normal)     # => #<Pin::Identifier type=:K side=:first state=:normal terminal=false>
+    #   Sashite::Pin.identifier(:R, :first, :enhanced)   # => #<Pin::Identifier type=:R side=:first state=:enhanced terminal=false>
+    #   Sashite::Pin.identifier(:P, :second, :diminished) # => #<Pin::Identifier type=:P side=:second state=:diminished terminal=false>
+    #   Sashite::Pin.identifier(:K, :first, :normal, terminal: true) # => #<Pin::Identifier type=:K side=:first state=:normal terminal=true>
+    def self.identifier(type, side, state, terminal: false)
+      Identifier.new(type, side, state, terminal: terminal)
     end
   end
 end

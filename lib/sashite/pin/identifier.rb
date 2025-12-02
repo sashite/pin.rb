@@ -17,12 +17,15 @@ module Sashite
     # This follows the Game Protocol's piece model with Type, Side, and State attributes.
     class Identifier
       # PIN validation pattern matching the specification
-      PIN_PATTERN = /\A(?<prefix>[-+])?(?<letter>[a-zA-Z])\z/
+      PIN_PATTERN = /\A(?<prefix>[-+])?(?<letter>[a-zA-Z])(?<terminal>\^)?\z/
 
       # Valid state modifiers
       ENHANCED_PREFIX = "+"
       DIMINISHED_PREFIX = "-"
       NORMAL_PREFIX = ""
+
+      # Terminal marker
+      TERMINAL_MARKER = "^"
 
       # State constants
       ENHANCED_STATE = :enhanced
@@ -57,13 +60,17 @@ module Sashite
       # @return [Symbol] the piece state (:normal, :enhanced, or :diminished)
       attr_reader :state
 
+      # @return [Boolean] whether the piece is a terminal piece
+      attr_reader :terminal
+
       # Create a new identifier instance
       #
       # @param type [Symbol] piece type (:A to :Z)
       # @param side [Symbol] player side (:first or :second)
       # @param state [Symbol] piece state (:normal, :enhanced, or :diminished)
+      # @param terminal [Boolean] whether the piece is a terminal piece
       # @raise [ArgumentError] if parameters are invalid
-      def initialize(type, side, state = NORMAL_STATE)
+      def initialize(type, side, state = NORMAL_STATE, terminal: false)
         self.class.validate_type(type)
         self.class.validate_side(side)
         self.class.validate_state(state)
@@ -71,6 +78,7 @@ module Sashite
         @type = type
         @side = side
         @state = state
+        @terminal = !!terminal
 
         freeze
       end
@@ -81,9 +89,11 @@ module Sashite
       # @return [Identifier] new identifier instance
       # @raise [ArgumentError] if the PIN string is invalid
       # @example
-      #   Pin::Identifier.parse("k")     # => #<Pin::Identifier type=:K side=:second state=:normal>
-      #   Pin::Identifier.parse("+R")    # => #<Pin::Identifier type=:R side=:first state=:enhanced>
-      #   Pin::Identifier.parse("-p")    # => #<Pin::Identifier type=:P side=:second state=:diminished>
+      #   Pin::Identifier.parse("k")     # => #<Pin::Identifier type=:K side=:second state=:normal terminal=false>
+      #   Pin::Identifier.parse("+R")    # => #<Pin::Identifier type=:R side=:first state=:enhanced terminal=false>
+      #   Pin::Identifier.parse("-p")    # => #<Pin::Identifier type=:P side=:second state=:diminished terminal=false>
+      #   Pin::Identifier.parse("K^")    # => #<Pin::Identifier type=:K side=:first state=:normal terminal=true>
+      #   Pin::Identifier.parse("+K^")   # => #<Pin::Identifier type=:K side=:first state=:enhanced terminal=true>
       def self.parse(pin_string)
         string_value = String(pin_string)
         matches = match_pattern(string_value)
@@ -91,6 +101,7 @@ module Sashite
         letter = matches[:letter]
         enhanced = matches[:prefix] == ENHANCED_PREFIX
         diminished = matches[:prefix] == DIMINISHED_PREFIX
+        is_terminal = matches[:terminal] == TERMINAL_MARKER
 
         type = letter.upcase.to_sym
         side = letter == letter.upcase ? FIRST_PLAYER : SECOND_PLAYER
@@ -102,7 +113,7 @@ module Sashite
                   NORMAL_STATE
                 end
 
-        new(type, side, state)
+        new(type, side, state, terminal: is_terminal)
       end
 
       # Check if a string is a valid PIN notation
@@ -127,8 +138,10 @@ module Sashite
       # @return [String] PIN notation string
       # @example
       #   identifier.to_s  # => "+R"
+      #   terminal_king.to_s  # => "K^"
+      #   enhanced_terminal.to_s  # => "+K^"
       def to_s
-        "#{prefix}#{letter}"
+        "#{prefix}#{letter}#{suffix}"
       end
 
       # Get the letter representation
@@ -149,13 +162,20 @@ module Sashite
         end
       end
 
+      # Get the suffix representation
+      #
+      # @return [String] suffix representing terminal status
+      def suffix
+        terminal? ? TERMINAL_MARKER : ""
+      end
+
       # Create a new identifier with enhanced state
       #
       # @return [Identifier] new identifier instance with enhanced state
       def enhance
         return self if enhanced?
 
-        self.class.new(type, side, ENHANCED_STATE)
+        self.class.new(type, side, ENHANCED_STATE, terminal: terminal)
       end
 
       # Create a new identifier without enhanced state
@@ -164,7 +184,7 @@ module Sashite
       def unenhance
         return self unless enhanced?
 
-        self.class.new(type, side, NORMAL_STATE)
+        self.class.new(type, side, NORMAL_STATE, terminal: terminal)
       end
 
       # Create a new identifier with diminished state
@@ -173,7 +193,7 @@ module Sashite
       def diminish
         return self if diminished?
 
-        self.class.new(type, side, DIMINISHED_STATE)
+        self.class.new(type, side, DIMINISHED_STATE, terminal: terminal)
       end
 
       # Create a new identifier without diminished state
@@ -182,7 +202,7 @@ module Sashite
       def undiminish
         return self unless diminished?
 
-        self.class.new(type, side, NORMAL_STATE)
+        self.class.new(type, side, NORMAL_STATE, terminal: terminal)
       end
 
       # Create a new identifier with normal state (no modifiers)
@@ -191,14 +211,32 @@ module Sashite
       def normalize
         return self if normal?
 
-        self.class.new(type, side, NORMAL_STATE)
+        self.class.new(type, side, NORMAL_STATE, terminal: terminal)
+      end
+
+      # Create a new identifier marked as terminal
+      #
+      # @return [Identifier] new identifier instance marked as terminal
+      def mark_terminal
+        return self if terminal?
+
+        self.class.new(type, side, state, terminal: true)
+      end
+
+      # Create a new identifier unmarked as terminal
+      #
+      # @return [Identifier] new identifier instance unmarked as terminal
+      def unmark_terminal
+        return self unless terminal?
+
+        self.class.new(type, side, state, terminal: false)
       end
 
       # Create a new identifier with opposite side
       #
       # @return [Identifier] new identifier instance with opposite side
       def flip
-        self.class.new(type, opposite_side, state)
+        self.class.new(type, opposite_side, state, terminal: terminal)
       end
 
       # Create a new identifier with a different type
@@ -209,7 +247,7 @@ module Sashite
         self.class.validate_type(new_type)
         return self if type == new_type
 
-        self.class.new(new_type, side, state)
+        self.class.new(new_type, side, state, terminal: terminal)
       end
 
       # Create a new identifier with a different side
@@ -220,7 +258,7 @@ module Sashite
         self.class.validate_side(new_side)
         return self if side == new_side
 
-        self.class.new(type, new_side, state)
+        self.class.new(type, new_side, state, terminal: terminal)
       end
 
       # Create a new identifier with a different state
@@ -231,7 +269,18 @@ module Sashite
         self.class.validate_state(new_state)
         return self if state == new_state
 
-        self.class.new(type, side, new_state)
+        self.class.new(type, side, new_state, terminal: terminal)
+      end
+
+      # Create a new identifier with a different terminal status
+      #
+      # @param new_terminal [Boolean] new terminal status
+      # @return [Identifier] new identifier instance with new terminal status
+      def with_terminal(new_terminal)
+        new_terminal_bool = !!new_terminal
+        return self if terminal? == new_terminal_bool
+
+        self.class.new(type, side, state, terminal: new_terminal_bool)
       end
 
       # Check if the identifier has enhanced state
@@ -269,6 +318,13 @@ module Sashite
         side == SECOND_PLAYER
       end
 
+      # Check if the identifier is a terminal piece
+      #
+      # @return [Boolean] true if terminal
+      def terminal?
+        terminal
+      end
+
       # Check if this identifier is the same type as another
       #
       # @param other [Identifier] identifier to compare with
@@ -299,6 +355,16 @@ module Sashite
         state == other.state
       end
 
+      # Check if this identifier has the same terminal status as another
+      #
+      # @param other [Identifier] identifier to compare with
+      # @return [Boolean] true if same terminal status
+      def same_terminal?(other)
+        return false unless other.is_a?(self.class)
+
+        terminal? == other.terminal?
+      end
+
       # Custom equality comparison
       #
       # @param other [Object] object to compare with
@@ -306,7 +372,7 @@ module Sashite
       def ==(other)
         return false unless other.is_a?(self.class)
 
-        type == other.type && side == other.side && state == other.state
+        type == other.type && side == other.side && state == other.state && terminal? == other.terminal?
       end
 
       # Alias for == to ensure Set functionality works correctly
@@ -316,7 +382,7 @@ module Sashite
       #
       # @return [Integer] hash value
       def hash
-        [self.class, type, side, state].hash
+        [self.class, type, side, state, terminal?].hash
       end
 
       # Validate that the type is a valid symbol

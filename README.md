@@ -32,19 +32,28 @@ gem install sashite-pin
 require "sashite/pin"
 
 # Parse PIN strings into identifier objects
-identifier = Sashite::Pin.parse("K")          # => #<Pin::Identifier type=:K side=:first state=:normal>
+identifier = Sashite::Pin.parse("K")          # => #<Pin::Identifier type=:K side=:first state=:normal terminal=false>
 identifier.to_s                               # => "K"
 identifier.type                               # => :K
 identifier.side                               # => :first
 identifier.state                              # => :normal
+identifier.terminal?                          # => false
+
+# Parse terminal pieces (e.g., kings in chess)
+terminal_king = Sashite::Pin.parse("K^")      # => #<Pin::Identifier type=:K side=:first state=:normal terminal=true>
+terminal_king.to_s                            # => "K^"
+terminal_king.terminal?                       # => true
 
 # Create identifiers directly
-identifier = Sashite::Pin.identifier(:K, :first, :normal)    # => #<Pin::Identifier type=:K side=:first state=:normal>
+identifier = Sashite::Pin.identifier(:K, :first, :normal)                    # => #<Pin::Identifier type=:K side=:first state=:normal>
+terminal_king = Sashite::Pin.identifier(:K, :first, :normal, terminal: true) # => #<Pin::Identifier type=:K side=:first state=:normal terminal=true>
 identifier = Sashite::Pin::Identifier.new(:R, :second, :enhanced)  # => #<Pin::Identifier type=:R side=:second state=:enhanced>
 
 # Validate PIN strings
 Sashite::Pin.valid?("K")                 # => true
 Sashite::Pin.valid?("+R")                # => true
+Sashite::Pin.valid?("K^")                # => true
+Sashite::Pin.valid?("+K^")               # => true
 Sashite::Pin.valid?("invalid")           # => false
 
 # State manipulation (returns new immutable instances)
@@ -52,6 +61,11 @@ enhanced = identifier.enhance                 # => #<Pin::Identifier type=:K sid
 enhanced.to_s                                 # => "+K"
 diminished = identifier.diminish              # => #<Pin::Identifier type=:K side=:first state=:diminished>
 diminished.to_s                               # => "-K"
+
+# Terminal marker manipulation
+normal_king = Sashite::Pin.parse("K")
+terminal_king = normal_king.mark_terminal     # => "K^"
+back_to_normal = terminal_king.unmark_terminal # => "K"
 
 # Side manipulation
 flipped = identifier.flip                     # => #<Pin::Identifier type=:K side=:second state=:normal>
@@ -74,6 +88,7 @@ flipped.second_player?                        # => true
 identifier.letter                             # => "K"
 enhanced.prefix                               # => "+"
 identifier.prefix                             # => ""
+terminal_king.suffix                          # => "^"
 
 # Type and side comparison
 king1 = Sashite::Pin.parse("K")
@@ -87,6 +102,10 @@ king1.same_type?(queen)                       # => false (different types)
 # Functional transformations can be chained
 pawn = Sashite::Pin.parse("P")
 enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted pawn)
+
+# Transformations preserve terminal status
+terminal_piece = Sashite::Pin.parse("K^")
+enhanced_terminal = terminal_piece.enhance    # => "+K^"
 ```
 
 ## Format Specification
@@ -94,7 +113,7 @@ enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted 
 ### Structure
 
 ```
-[<state>]<letter>
+[<state-modifier>]<letter>[<terminal-marker>]
 ```
 
 ### Components
@@ -103,23 +122,30 @@ enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted 
 
   * Uppercase: First player pieces
   * Lowercase: Second player pieces
-* **State** (optional prefix):
+* **State Modifier** (optional prefix):
 
   * `+`: Enhanced state (promoted, upgraded, empowered)
   * `-`: Diminished state (weakened, restricted, temporary)
   * No prefix: Normal state
+* **Terminal Marker** (optional suffix):
+
+  * `^`: Terminal piece (critical to match continuation)
+  * No suffix: Non-terminal piece
 
 ### Regular Expression
 
 ```ruby
-/\A[-+]?[A-Za-z]\z/
+/\A[-+]?[A-Za-z]\^?\z/
 ```
 
 ### Examples
 
 * `K` - First player king (normal state)
+* `K^` - First player king (normal state, terminal)
 * `k` - Second player king (normal state)
+* `k^` - Second player king (normal state, terminal)
 * `+R` - First player rook (enhanced state)
+* `+R^` - First player rook (enhanced state, terminal)
 * `-p` - Second player pawn (diminished state)
 
 ## API Reference
@@ -128,13 +154,13 @@ enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted 
 
 * `Sashite::Pin.valid?(pin_string)` - Check if string is valid PIN notation
 * `Sashite::Pin.parse(pin_string)` - Parse PIN string into Identifier object
-* `Sashite::Pin.identifier(type, side, state = :normal)` - Create identifier instance directly
+* `Sashite::Pin.identifier(type, side, state = :normal, terminal: false)` - Create identifier instance directly
 
 ### Identifier Class
 
 #### Creation and Parsing
 
-* `Sashite::Pin::Identifier.new(type, side, state = :normal)` - Create identifier instance
+* `Sashite::Pin::Identifier.new(type, side, state = :normal, terminal: false)` - Create identifier instance
 * `Sashite::Pin::Identifier.parse(pin_string)` - Parse PIN string (same as module method)
 * `Sashite::Pin::Identifier.valid?(pin_string)` - Validate PIN string (class method)
 
@@ -143,8 +169,10 @@ enemy_promoted = pawn.flip.enhance            # => "+p" (second player promoted 
 * `#type` - Get piece type (symbol \:A to \:Z, always uppercase)
 * `#side` - Get player side (\:first or \:second)
 * `#state` - Get state (\:normal, \:enhanced, or \:diminished)
+* `#terminal` - Get terminal status (Boolean)
 * `#letter` - Get letter representation (string, case determined by side)
 * `#prefix` - Get state prefix (string: "+", "-", or "")
+* `#suffix` - Get terminal marker (string: "^" or "")
 * `#to_s` - Convert to PIN string representation
 
 #### Type and Case Handling
@@ -174,6 +202,10 @@ identifier2.letter  # => "k" (lowercase display)
 * `#first_player?` - Check if first player identifier
 * `#second_player?` - Check if second player identifier
 
+#### Terminal Queries
+
+* `#terminal?` - Check if terminal piece
+
 #### State Transformations (immutable - return new instances)
 
 * `#enhance` - Create enhanced version
@@ -189,16 +221,24 @@ identifier2.letter  # => "k" (lowercase display)
 * `#with_side(new_side)` - Create identifier with different side
 * `#with_state(new_state)` - Create identifier with different state
 
+#### Terminal Transformations (immutable - return new instances)
+
+* `#mark_terminal` - Create terminal version
+* `#unmark_terminal` - Create non-terminal version
+* `#with_terminal(boolean)` - Create identifier with specified terminal status
+
 #### Comparison Methods
 
 * `#same_type?(other)` - Check if same piece type
 * `#same_side?(other)` - Check if same side
 * `#same_state?(other)` - Check if same state
+* `#same_terminal?(other)` - Check if same terminal status
 * `#==(other)` - Full equality comparison
 
 ### Constants
 
 * `Sashite::Pin::Identifier::PIN_PATTERN` - Regular expression for PIN validation (internal use)
+* `Sashite::Pin::Identifier::TERMINAL_MARKER` - Terminal marker character (`"^"`)
 
 ## Advanced Usage
 
@@ -229,7 +269,7 @@ white_king.same_side?(black_king)  # => false
 ### Immutable Transformations
 ```ruby
 # All transformations return new instances
-original = Sashite::Pin.piece(:K, :first, :normal)
+original = Sashite::Pin.identifier(:K, :first, :normal)
 enhanced = original.enhance
 diminished = original.diminish
 
@@ -241,6 +281,11 @@ puts diminished.to_s  # => "-K"
 # Transformations can be chained
 result = original.flip.enhance.with_type(:Q)
 puts result.to_s      # => "+q"
+
+# Terminal status is preserved through transformations
+terminal_king = Sashite::Pin.parse("K^")
+enhanced_terminal = terminal_king.enhance
+puts enhanced_terminal.to_s  # => "+K^"
 ```
 
 ### Game State Management
@@ -274,13 +319,17 @@ class GameBoard
   def promoted_pieces
     @pieces.select { |_, piece| piece.enhanced? }
   end
+
+  def terminal_pieces
+    @pieces.select { |_, piece| piece.terminal? }
+  end
 end
 
 # Usage
 board = GameBoard.new
-board.place("e1", Sashite::Pin.piece(:K, :first, :normal))
-board.place("e8", Sashite::Pin.piece(:K, :second, :normal))
-board.place("a7", Sashite::Pin.piece(:P, :first, :normal))
+board.place("e1", Sashite::Pin.identifier(:K, :first, :normal, terminal: true))
+board.place("e8", Sashite::Pin.identifier(:K, :second, :normal, terminal: true))
+board.place("a7", Sashite::Pin.identifier(:P, :first, :normal))
 
 # Promote pawn
 board.promote("a7", :Q)
@@ -299,14 +348,16 @@ def analyze_pieces(pins)
     by_type: pieces.group_by(&:type),
     by_state: pieces.group_by(&:state),
     promoted: pieces.count(&:enhanced?),
-    weakened: pieces.count(&:diminished?)
+    weakened: pieces.count(&:diminished?),
+    terminal: pieces.count(&:terminal?)
   }
 end
 
-pins = %w[K Q +R B N P k q r +b n -p]
+pins = %w[K^ Q +R B N P k^ q r +b n -p]
 analysis = analyze_pieces(pins)
 puts analysis[:by_side][:first].size  # => 6
 puts analysis[:promoted]              # => 2
+puts analysis[:terminal]              # => 2
 ```
 
 ### Move Validation Example
@@ -325,7 +376,7 @@ def can_promote?(piece, target_rank)
   end
 end
 
-pawn = Sashite::Pin.piece(:P, :first, :normal)
+pawn = Sashite::Pin.identifier(:P, :first, :normal)
 puts can_promote?(pawn, 8)          # => true
 
 promoted_pawn = pawn.enhance
@@ -338,9 +389,10 @@ Following the [Game Protocol](https://sashite.dev/game-protocol/):
 
 | Protocol Attribute | PIN Encoding | Examples | Notes |
 |-------------------|--------------|----------|-------|
-| **Type** | ASCII letter choice | `K`/`k` = King, `P`/`p` = Pawn | Type is always stored as uppercase symbol (`:K`, `:P`) |
-| **Side** | Letter case in display | `K` = First player, `k` = Second player | Case is determined by side during rendering |
-| **State** | Optional prefix | `+K` = Enhanced, `-K` = Diminished, `K` = Normal | |
+| **Piece Name** | ASCII letter choice | `K`/`k` = King, `P`/`p` = Pawn | Type is always stored as uppercase symbol (`:K`, `:P`) |
+| **Piece Side** | Letter case in display | `K` = First player, `k` = Second player | Case is determined by side during rendering |
+| **Piece State** | Optional prefix | `+K` = Enhanced, `-K` = Diminished, `K` = Normal | |
+| **Terminal Status** | Optional suffix | `K^` = Terminal, `K` = Non-terminal | Identifies pieces critical to match continuation |
 
 **Type Convention**: All piece types are internally represented as uppercase symbols (`:A` to `:Z`). The display case is determined by the `side` attribute: first player pieces display as uppercase, second player pieces as lowercase.
 
@@ -352,9 +404,10 @@ Following the [Game Protocol](https://sashite.dev/game-protocol/):
 
 * **ASCII Compatible**: Maximum portability across systems
 * **Rule-Agnostic**: Independent of specific game mechanics
-* **Compact Format**: 1-2 characters per piece
+* **Compact Format**: 1-3 characters per piece
 * **Visual Distinction**: Clear player differentiation through case
 * **Type Normalization**: Consistent uppercase type representation internally
+* **Terminal Marker**: Explicit identification of pieces critical to match continuation
 * **Protocol Compliant**: Direct implementation of Sashité piece attributes
 * **Immutable**: All piece instances are frozen and transformations return new objects
 * **Functional**: Pure functions with no side effects
@@ -375,6 +428,15 @@ This design ensures:
 - Clear separation between piece identity (type) and ownership (side)
 - Predictable behavior when comparing pieces of the same type
 
+### Terminal Marker Convention
+
+The terminal marker (`^`) identifies pieces whose presence, condition, or capacity for action determines whether the match can continue:
+
+1. **Suffix Position**: Always appears as the last character (`K^`, `+K^`, `-k^`)
+2. **Preservation**: Terminal status is preserved through all transformations
+3. **Equality**: Two pieces are equal only if they have the same terminal status
+4. **Independence**: Terminal status is independent of state (normal/enhanced/diminished)
+
 ### Example Flow
 
 ```ruby
@@ -394,6 +456,7 @@ This ensures that `parse(pin).to_s == pin` for all valid PIN strings while maint
 - **Maximum 26 piece types** per game system (one per ASCII letter)
 - **Exactly 2 players** (uppercase/lowercase distinction)
 - **3 state levels** (enhanced, normal, diminished)
+- **2 terminal levels** (terminal, non-terminal)
 
 ## Related Specifications
 
