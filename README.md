@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/github/v/tag/sashite/pin.rb?label=Version&logo=github)](https://github.com/sashite/pin.rb/tags)
 [![Yard documentation](https://img.shields.io/badge/Yard-documentation-blue.svg?logo=github)](https://rubydoc.info/github/sashite/pin.rb/main)
 ![Ruby](https://github.com/sashite/pin.rb/actions/workflows/main.yml/badge.svg?branch=main)
-[![License](https://img.shields.io/github/license/sashite/pin.rb?label=License&logo=github)](https://github.com/sashite/pin.rb/raw/main/LICENSE.md)
+[![License](https://img.shields.io/github/license/sashite/pin.rb?label=License&logo=github)](https://github.com/sashite/pin.rb/raw/main/LICENSE)
 
 > **PIN** (Piece Identifier Notation) implementation for Ruby.
 
@@ -228,13 +228,9 @@ Following the [Game Protocol](https://sashite.dev/game-protocol/):
 ## Related Specifications
 
 - [Game Protocol](https://sashite.dev/game-protocol/) — Conceptual foundation
-- [PNN](https://sashite.dev/specs/pnn/) — Piece Name Notation
 - [PIN Specification](https://sashite.dev/specs/pin/1.0.0/) — Official specification
+- [PIN Examples](https://sashite.dev/specs/pin/1.0.0/examples/) — Usage examples
 
 ## License
 
-Available as open source under the [MIT License](https://opensource.org/licenses/MIT).
-
-## About
-
-Maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of board game cultures.
+Available as open source under the [Apache License 2.0](https://opensource.org/licenses/Apache-2.0).

@@ -14,8 +14,8 @@ Gem::Specification.new do |spec|
   DESC
 
   spec.homepage               = "https://github.com/sashite/pin.rb"
-  spec.license                = "MIT"
-  spec.files                  = ::Dir["LICENSE.md", "README.md", "lib/**/*"]
+  spec.license                = "Apache-2.0"
+  spec.files                  = ::Dir["LICENSE", "README.md", "lib/**/*"]
   spec.required_ruby_version  = ">= 3.2.0"
 
   spec.metadata = {
