@@ -5,14 +5,16 @@ require "rake/testtask"
 require "yard"
 
 Rake::TestTask.new do |t|
-  t.pattern = "test.rb"
+  t.pattern = "test/**/test_*.rb"
   t.verbose = true
   t.warning = true
 end
 
 YARD::Rake::YardocTask.new
 
+Dir["tasks/**/*.rake"].each { |t| load t }
+
 task default: %i[
-  test
   yard
+  test
 ]

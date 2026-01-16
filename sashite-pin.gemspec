@@ -1,18 +1,12 @@
 # frozen_string_literal: true
 
 Gem::Specification.new do |spec|
-  spec.name    = "sashite-pin"
-  spec.version = ::File.read("VERSION.semver").chomp
-  spec.author  = "Cyril Kato"
-  spec.email   = "contact@cyril.email"
-  spec.summary = "PIN (Piece Identifier Notation) implementation for Ruby with immutable identifier objects"
-
-  spec.description = <<~DESC
-    PIN (Piece Identifier Notation) implementation for Ruby.
-    Provides a rule-agnostic format for identifying pieces in abstract strategy
-    board games with immutable identifier objects and functional programming principles.
-  DESC
-
+  spec.name                   = "sashite-pin"
+  spec.version                = ::File.read("VERSION.semver").chomp
+  spec.author                 = "Cyril Kato"
+  spec.email                  = "contact@cyril.email"
+  spec.summary                = "PIN (Piece Identifier Notation) implementation for Ruby with immutable identifier objects"
+  spec.description            = "PIN (Piece Identifier Notation) implementation for Ruby. Provides a rule-agnostic format for identifying pieces in abstract strategy board games with immutable identifier objects and functional programming principles."
   spec.homepage               = "https://github.com/sashite/pin.rb"
   spec.license                = "Apache-2.0"
   spec.files                  = ::Dir["LICENSE", "README.md", "lib/**/*"]
@@ -24,6 +18,8 @@ Gem::Specification.new do |spec|
     "homepage_uri"          => "https://github.com/sashite/pin.rb",
     "source_code_uri"       => "https://github.com/sashite/pin.rb",
     "specification_uri"     => "https://sashite.dev/specs/pin/1.0.0/",
+    "wiki_uri"              => "https://sashite.dev/specs/pin/1.0.0/examples/",
+    "funding_uri"           => "https://github.com/sponsors/sashite",
     "rubygems_mfa_required" => "true"
   }
 end
