@@ -17,7 +17,7 @@ module Sashite
           INVALID_TERMINAL_MARKER = "invalid terminal marker"
 
           # Validation errors (constructor)
-          INVALID_TYPE = "type must be a symbol from :A to :Z"
+          INVALID_ABBR = "abbr must be a symbol from :A to :Z"
           INVALID_SIDE = "side must be :first or :second"
           INVALID_STATE = "state must be :normal, :enhanced, or :diminished"
           INVALID_TERMINAL = "terminal must be true or false"

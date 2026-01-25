@@ -8,8 +8,8 @@ module Sashite
     # Represents a parsed PIN (Piece Identifier Notation) identifier.
     #
     # An Identifier encodes four attributes of a piece:
-    # - Type: the piece type (A-Z as uppercase symbol)
-    # - Side: the player side (:first or :second)
+    # - Abbr: the piece name abbreviation (A-Z as uppercase symbol)
+    # - Side: the piece side (:first or :second)
     # - State: the piece state (:normal, :enhanced, or :diminished)
     # - Terminal: whether the piece is terminal (true or false)
     #
@@ -21,16 +21,16 @@ module Sashite
     #   pin = Identifier.new(:K, :first, :normal, terminal: true)
     #
     # @example String conversion
-    #   Identifier.new(:K, :first).to_s                        # => "K"
-    #   Identifier.new(:R, :second, :enhanced).to_s            # => "+r"
+    #   Identifier.new(:K, :first).to_s                          # => "K"
+    #   Identifier.new(:R, :second, :enhanced).to_s              # => "+r"
     #   Identifier.new(:K, :first, :normal, terminal: true).to_s # => "K^"
     #
     # @see https://sashite.dev/specs/pin/1.0.0/
     class Identifier
-      # @return [Symbol] Piece type (:A to :Z, always uppercase)
-      attr_reader :type
+      # @return [Symbol] Piece name abbreviation (:A to :Z, always uppercase)
+      attr_reader :abbr
 
-      # @return [Symbol] Player side (:first or :second)
+      # @return [Symbol] Piece side (:first or :second)
       attr_reader :side
 
       # @return [Symbol] Piece state (:normal, :enhanced, or :diminished)
@@ -38,8 +38,8 @@ module Sashite
 
       # Creates a new Identifier instance.
       #
-      # @param type [Symbol] Piece type (:A to :Z)
-      # @param side [Symbol] Player side (:first or :second)
+      # @param abbr [Symbol] Piece name abbreviation (:A to :Z)
+      # @param side [Symbol] Piece side (:first or :second)
       # @param state [Symbol] Piece state (:normal, :enhanced, or :diminished)
       # @param terminal [Boolean] Terminal status
       # @return [Identifier] A new frozen Identifier instance
@@ -49,13 +49,13 @@ module Sashite
       #   Identifier.new(:K, :first)
       #   Identifier.new(:R, :second, :enhanced)
       #   Identifier.new(:K, :first, :normal, terminal: true)
-      def initialize(type, side, state = :normal, terminal: false)
-        validate_type!(type)
+      def initialize(abbr, side, state = :normal, terminal: false)
+        validate_abbr!(abbr)
         validate_side!(side)
         validate_state!(state)
         validate_terminal!(terminal)
 
-        @type = type
+        @abbr = abbr
         @side = side
         @state = state
         @terminal = terminal
@@ -68,7 +68,7 @@ module Sashite
       # @return [Boolean] true if terminal piece, false otherwise
       #
       # @example
-      #   Identifier.new(:K, :first).terminal?                        # => false
+      #   Identifier.new(:K, :first).terminal?                          # => false
       #   Identifier.new(:K, :first, :normal, terminal: true).terminal? # => true
       def terminal?
         @terminal
@@ -83,8 +83,8 @@ module Sashite
       # @return [String] The PIN string
       #
       # @example
-      #   Identifier.new(:K, :first).to_s                        # => "K"
-      #   Identifier.new(:R, :second, :enhanced).to_s            # => "+r"
+      #   Identifier.new(:K, :first).to_s                          # => "K"
+      #   Identifier.new(:R, :second, :enhanced).to_s              # => "+r"
       #   Identifier.new(:K, :first, :normal, terminal: true).to_s # => "K^"
       def to_s
         "#{prefix}#{letter}#{suffix}"
@@ -99,8 +99,8 @@ module Sashite
       #   Identifier.new(:K, :second).letter # => "k"
       def letter
         case side
-        when :first then String(type.upcase)
-        when :second then String(type.downcase)
+        when :first then String(abbr.upcase)
+        when :second then String(abbr.downcase)
         end
       end
 
@@ -145,7 +145,7 @@ module Sashite
       def enhance
         return self if enhanced?
 
-        self.class.new(type, side, :enhanced, terminal: terminal?)
+        self.class.new(abbr, side, :enhanced, terminal: terminal?)
       end
 
       # Returns a new Identifier with diminished state.
@@ -158,7 +158,7 @@ module Sashite
       def diminish
         return self if diminished?
 
-        self.class.new(type, side, :diminished, terminal: terminal?)
+        self.class.new(abbr, side, :diminished, terminal: terminal?)
       end
 
       # Returns a new Identifier with normal state.
@@ -171,7 +171,7 @@ module Sashite
       def normalize
         return self if normal?
 
-        self.class.new(type, side, :normal, terminal: terminal?)
+        self.class.new(abbr, side, :normal, terminal: terminal?)
       end
 
       # ========================================================================
@@ -187,7 +187,7 @@ module Sashite
       #   pin.flip.to_s # => "k"
       def flip
         new_side = first_player? ? :second : :first
-        self.class.new(type, new_side, state, terminal: terminal?)
+        self.class.new(abbr, new_side, state, terminal: terminal?)
       end
 
       # ========================================================================
@@ -200,11 +200,11 @@ module Sashite
       #
       # @example
       #   pin = Identifier.new(:K, :first)
-      #   pin.mark_terminal.to_s # => "K^"
-      def mark_terminal
+      #   pin.terminal.to_s # => "K^"
+      def terminal
         return self if terminal?
 
-        self.class.new(type, side, state, terminal: true)
+        self.class.new(abbr, side, state, terminal: true)
       end
 
       # Returns a new Identifier unmarked as terminal.
@@ -213,30 +213,30 @@ module Sashite
       #
       # @example
       #   pin = Identifier.new(:K, :first, :normal, terminal: true)
-      #   pin.unmark_terminal.to_s # => "K"
-      def unmark_terminal
+      #   pin.non_terminal.to_s # => "K"
+      def non_terminal
         return self unless terminal?
 
-        self.class.new(type, side, state, terminal: false)
+        self.class.new(abbr, side, state, terminal: false)
       end
 
       # ========================================================================
       # Attribute Transformations
       # ========================================================================
 
-      # Returns a new Identifier with a different type.
+      # Returns a new Identifier with a different abbreviation.
       #
-      # @param new_type [Symbol] The new piece type (:A to :Z)
-      # @return [Identifier] A new Identifier with the specified type
-      # @raise [Errors::Argument] If the type is invalid
+      # @param new_abbr [Symbol] The new piece name abbreviation (:A to :Z)
+      # @return [Identifier] A new Identifier with the specified abbreviation
+      # @raise [Errors::Argument] If the abbreviation is invalid
       #
       # @example
       #   pin = Identifier.new(:K, :first)
-      #   pin.with_type(:Q).to_s # => "Q"
-      def with_type(new_type)
-        return self if type.equal?(new_type)
+      #   pin.with_abbr(:Q).to_s # => "Q"
+      def with_abbr(new_abbr)
+        return self if abbr.equal?(new_abbr)
 
-        self.class.new(new_type, side, state, terminal: terminal?)
+        self.class.new(new_abbr, side, state, terminal: terminal?)
       end
 
       # Returns a new Identifier with a different side.
@@ -251,7 +251,7 @@ module Sashite
       def with_side(new_side)
         return self if side.equal?(new_side)
 
-        self.class.new(type, new_side, state, terminal: terminal?)
+        self.class.new(abbr, new_side, state, terminal: terminal?)
       end
 
       # Returns a new Identifier with a different state.
@@ -266,7 +266,7 @@ module Sashite
       def with_state(new_state)
         return self if state.equal?(new_state)
 
-        self.class.new(type, side, new_state, terminal: terminal?)
+        self.class.new(abbr, side, new_state, terminal: terminal?)
       end
 
       # Returns a new Identifier with a different terminal status.
@@ -281,7 +281,7 @@ module Sashite
       def with_terminal(new_terminal)
         return self if terminal?.equal?(new_terminal)
 
-        self.class.new(type, side, state, terminal: new_terminal)
+        self.class.new(abbr, side, state, terminal: new_terminal)
       end
 
       # ========================================================================
@@ -346,17 +346,17 @@ module Sashite
       # Comparison Queries
       # ========================================================================
 
-      # Checks if two Identifiers have the same type.
+      # Checks if two Identifiers have the same abbreviation.
       #
       # @param other [Identifier] The other Identifier to compare
-      # @return [Boolean] true if same type
+      # @return [Boolean] true if same abbreviation
       #
       # @example
       #   pin1 = Identifier.new(:K, :first)
       #   pin2 = Identifier.new(:K, :second)
-      #   pin1.same_type?(pin2) # => true
-      def same_type?(other)
-        type.equal?(other.type)
+      #   pin1.same_abbr?(pin2) # => true
+      def same_abbr?(other)
+        abbr.equal?(other.abbr)
       end
 
       # Checks if two Identifiers have the same side.
@@ -409,7 +409,7 @@ module Sashite
       def ==(other)
         return false unless self.class === other
 
-        type.equal?(other.type) &&
+        abbr.equal?(other.abbr) &&
           side.equal?(other.side) &&
           state.equal?(other.state) &&
           terminal?.equal?(other.terminal?)
@@ -421,7 +421,7 @@ module Sashite
       #
       # @return [Integer] Hash code
       def hash
-        [type, side, state, terminal?].hash
+        [abbr, side, state, terminal?].hash
       end
 
       # Returns an inspect string for the Identifier.
@@ -437,10 +437,10 @@ module Sashite
       # Private Validation
       # ========================================================================
 
-      def validate_type!(type)
-        return if Constants::VALID_TYPES.include?(type)
+      def validate_abbr!(abbr)
+        return if Constants::VALID_ABBRS.include?(abbr)
 
-        raise Errors::Argument, Errors::Argument::Messages::INVALID_TYPE
+        raise Errors::Argument, Errors::Argument::Messages::INVALID_ABBR
       end
 
       def validate_side!(side)

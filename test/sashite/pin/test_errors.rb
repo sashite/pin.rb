@@ -51,8 +51,8 @@ end
 puts
 puts "Validation error messages:"
 
-run_test("INVALID_TYPE is defined") do
-  raise "wrong value" unless Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE == "type must be a symbol from :A to :Z"
+run_test("INVALID_ABBR is defined") do
+  raise "wrong value" unless Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR == "abbr must be a symbol from :A to :Z"
 end
 
 run_test("INVALID_SIDE is defined") do
@@ -101,8 +101,8 @@ run_test("EMPTY_INPUT is frozen") do
   raise "should be frozen" unless Sashite::Pin::Errors::Argument::Messages::EMPTY_INPUT.frozen?
 end
 
-run_test("INVALID_TYPE is frozen") do
-  raise "should be frozen" unless Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE.frozen?
+run_test("INVALID_ABBR is frozen") do
+  raise "should be frozen" unless Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR.frozen?
 end
 
 puts

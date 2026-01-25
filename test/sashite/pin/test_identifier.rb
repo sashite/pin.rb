@@ -24,9 +24,9 @@ puts
 
 puts "Constructor:"
 
-run_test("creates identifier with type and side") do
+run_test("creates identifier with abbr and side") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  raise "wrong type" unless pin.type == :K
+  raise "wrong abbr" unless pin.abbr == :K
   raise "wrong side" unless pin.side == :first
   raise "wrong state" unless pin.state == :normal
   raise "wrong terminal" unless pin.terminal? == false
@@ -34,7 +34,7 @@ end
 
 run_test("creates identifier with state") do
   pin = Sashite::Pin::Identifier.new(:R, :second, :enhanced)
-  raise "wrong type" unless pin.type == :R
+  raise "wrong abbr" unless pin.abbr == :R
   raise "wrong side" unless pin.side == :second
   raise "wrong state" unless pin.state == :enhanced
   raise "wrong terminal" unless pin.terminal? == false
@@ -42,7 +42,7 @@ end
 
 run_test("creates identifier with terminal") do
   pin = Sashite::Pin::Identifier.new(:K, :first, :normal, terminal: true)
-  raise "wrong type" unless pin.type == :K
+  raise "wrong abbr" unless pin.abbr == :K
   raise "wrong side" unless pin.side == :first
   raise "wrong state" unless pin.state == :normal
   raise "wrong terminal" unless pin.terminal? == true
@@ -50,7 +50,7 @@ end
 
 run_test("creates identifier with all attributes") do
   pin = Sashite::Pin::Identifier.new(:Q, :second, :diminished, terminal: true)
-  raise "wrong type" unless pin.type == :Q
+  raise "wrong abbr" unless pin.abbr == :Q
   raise "wrong side" unless pin.side == :second
   raise "wrong state" unless pin.state == :diminished
   raise "wrong terminal" unless pin.terminal? == true
@@ -61,10 +61,10 @@ run_test("identifier is frozen") do
   raise "should be frozen" unless pin.frozen?
 end
 
-run_test("accepts all valid types A-Z") do
-  (:A..:Z).each do |type|
-    pin = Sashite::Pin::Identifier.new(type, :first)
-    raise "wrong type for #{type}" unless pin.type == type
+run_test("accepts all valid abbrs A-Z") do
+  (:A..:Z).each do |abbr|
+    pin = Sashite::Pin::Identifier.new(abbr, :first)
+    raise "wrong abbr for #{abbr}" unless pin.abbr == abbr
   end
 end
 
@@ -75,25 +75,25 @@ end
 puts
 puts "Constructor error cases:"
 
-run_test("raises on invalid type") do
+run_test("raises on invalid abbr") do
   Sashite::Pin::Identifier.new(:invalid, :first)
   raise "should have raised"
 rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE
+  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR
 end
 
-run_test("raises on lowercase type symbol") do
+run_test("raises on lowercase abbr symbol") do
   Sashite::Pin::Identifier.new(:k, :first)
   raise "should have raised"
 rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE
+  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR
 end
 
-run_test("raises on string type") do
+run_test("raises on string abbr") do
   Sashite::Pin::Identifier.new("K", :first)
   raise "should have raised"
 rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE
+  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR
 end
 
 run_test("raises on invalid side") do
@@ -224,7 +224,7 @@ run_test("enhance returns enhanced identifier") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
   enhanced = pin.enhance
   raise "wrong state" unless enhanced.state == :enhanced
-  raise "wrong type" unless enhanced.type == :K
+  raise "wrong abbr" unless enhanced.abbr == :K
   raise "wrong side" unless enhanced.side == :first
 end
 
@@ -271,7 +271,7 @@ run_test("flip changes first to second") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
   flipped = pin.flip
   raise "wrong side" unless flipped.side == :second
-  raise "wrong type" unless flipped.type == :K
+  raise "wrong abbr" unless flipped.abbr == :K
 end
 
 run_test("flip changes second to first") do
@@ -297,26 +297,26 @@ end
 puts
 puts "Terminal transformations:"
 
-run_test("mark_terminal returns terminal identifier") do
+run_test("terminal returns terminal identifier") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  terminal = pin.mark_terminal
-  raise "should be terminal" unless terminal.terminal? == true
+  term = pin.terminal
+  raise "should be terminal" unless term.terminal? == true
 end
 
-run_test("mark_terminal returns self if already terminal") do
+run_test("terminal returns self if already terminal") do
   pin = Sashite::Pin::Identifier.new(:K, :first, :normal, terminal: true)
-  raise "should return same object" unless pin.mark_terminal.equal?(pin)
+  raise "should return same object" unless pin.terminal.equal?(pin)
 end
 
-run_test("unmark_terminal returns non-terminal identifier") do
+run_test("non_terminal returns non-terminal identifier") do
   pin = Sashite::Pin::Identifier.new(:K, :first, :normal, terminal: true)
-  non_terminal = pin.unmark_terminal
-  raise "should not be terminal" unless non_terminal.terminal? == false
+  non_term = pin.non_terminal
+  raise "should not be terminal" unless non_term.terminal? == false
 end
 
-run_test("unmark_terminal returns self if not terminal") do
+run_test("non_terminal returns self if not terminal") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  raise "should return same object" unless pin.unmark_terminal.equal?(pin)
+  raise "should return same object" unless pin.non_terminal.equal?(pin)
 end
 
 # ============================================================================
@@ -326,24 +326,24 @@ end
 puts
 puts "Attribute transformations:"
 
-run_test("with_type returns identifier with new type") do
+run_test("with_abbr returns identifier with new abbr") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  queen = pin.with_type(:Q)
-  raise "wrong type" unless queen.type == :Q
+  queen = pin.with_abbr(:Q)
+  raise "wrong abbr" unless queen.abbr == :Q
   raise "wrong side" unless queen.side == :first
 end
 
-run_test("with_type returns self if same type") do
+run_test("with_abbr returns self if same abbr") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  raise "should return same object" unless pin.with_type(:K).equal?(pin)
+  raise "should return same object" unless pin.with_abbr(:K).equal?(pin)
 end
 
-run_test("with_type raises on invalid type") do
+run_test("with_abbr raises on invalid abbr") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  pin.with_type(:invalid)
+  pin.with_abbr(:invalid)
   raise "should have raised"
 rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TYPE
+  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_ABBR
 end
 
 run_test("with_side returns identifier with new side") do
@@ -370,8 +370,8 @@ end
 
 run_test("with_terminal returns identifier with new terminal") do
   pin = Sashite::Pin::Identifier.new(:K, :first)
-  terminal = pin.with_terminal(true)
-  raise "should be terminal" unless terminal.terminal? == true
+  term = pin.with_terminal(true)
+  raise "should be terminal" unless term.terminal? == true
 end
 
 run_test("with_terminal returns self if same terminal") do
@@ -454,16 +454,16 @@ end
 puts
 puts "Comparison queries:"
 
-run_test("same_type? returns true for same type") do
+run_test("same_abbr? returns true for same abbr") do
   pin1 = Sashite::Pin::Identifier.new(:K, :first)
   pin2 = Sashite::Pin::Identifier.new(:K, :second)
-  raise "should have same type" unless pin1.same_type?(pin2) == true
+  raise "should have same abbr" unless pin1.same_abbr?(pin2) == true
 end
 
-run_test("same_type? returns false for different type") do
+run_test("same_abbr? returns false for different abbr") do
   pin1 = Sashite::Pin::Identifier.new(:K, :first)
   pin2 = Sashite::Pin::Identifier.new(:Q, :first)
-  raise "should not have same type" unless pin1.same_type?(pin2) == false
+  raise "should not have same abbr" unless pin1.same_abbr?(pin2) == false
 end
 
 run_test("same_side? returns true for same side") do
@@ -515,7 +515,7 @@ run_test("== returns true for equal identifiers") do
   raise "should be equal" unless pin1 == pin2
 end
 
-run_test("== returns false for different type") do
+run_test("== returns false for different abbr") do
   pin1 = Sashite::Pin::Identifier.new(:K, :first)
   pin2 = Sashite::Pin::Identifier.new(:Q, :first)
   raise "should not be equal" if pin1 == pin2

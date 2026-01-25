@@ -11,15 +11,15 @@ module Sashite
     # to prevent ReDoS attacks and ensure strict ASCII compliance.
     #
     # @example
-    #   Parser.parse("K")   # => { type: :K, side: :first, state: :normal, terminal: false }
-    #   Parser.parse("+r^") # => { type: :R, side: :second, state: :enhanced, terminal: true }
+    #   Parser.parse("K")   # => { abbr: :K, side: :first, state: :normal, terminal: false }
+    #   Parser.parse("+r^") # => { abbr: :R, side: :second, state: :enhanced, terminal: true }
     #
     # @see https://sashite.dev/specs/pin/1.0.0/
     module Parser
       # Parses a PIN string into its components.
       #
       # @param input [String] The PIN string to parse
-      # @return [Hash] A hash with :type, :side, :state, and :terminal keys
+      # @return [Hash] A hash with :abbr, :side, :state, and :terminal keys
       # @raise [Errors::Argument] If the input is not a valid PIN string
       def self.parse(input)
         validate_input_type(input)
@@ -78,7 +78,7 @@ module Sashite
         # Parses the PIN string into its components.
         #
         # @param input [String] The validated PIN string
-        # @return [Hash] A hash with :type, :side, :state, and :terminal keys
+        # @return [Hash] A hash with :abbr, :side, :state, and :terminal keys
         # @raise [Errors::Argument] If the structure is invalid
         def parse_components(input)
           pos = 0
@@ -98,7 +98,7 @@ module Sashite
           byte = input.getbyte(pos)
           raise Errors::Argument, Errors::Argument::Messages::MUST_CONTAIN_ONE_LETTER unless ascii_letter?(byte)
 
-          type = byte.chr.upcase.to_sym
+          abbr = byte.chr.upcase.to_sym
           side = uppercase_letter?(byte) ? :first : :second
           pos += 1
 
@@ -114,7 +114,7 @@ module Sashite
           # Ensure no extra characters
           raise Errors::Argument, Errors::Argument::Messages::MUST_CONTAIN_ONE_LETTER if pos < input.bytesize
 
-          { type: type, side: side, state: state, terminal: terminal }
+          { abbr: abbr, side: side, state: state, terminal: terminal }
         end
 
         # Checks if a byte is a state modifier (+ or -).

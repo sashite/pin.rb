@@ -6,8 +6,8 @@ module Sashite
     #
     # This module defines the valid values for PIN attributes.
     module Constants
-      # Valid piece types (uppercase symbols A-Z).
-      VALID_TYPES = %i[A B C D E F G H I J K L M N O P Q R S T U V W X Y Z].freeze
+      # Valid piece name abbreviations (uppercase symbols A-Z).
+      VALID_ABBRS = %i[A B C D E F G H I J K L M N O P Q R S T U V W X Y Z].freeze
 
       # Valid player sides.
       VALID_SIDES = %i[first second].freeze

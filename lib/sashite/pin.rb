@@ -16,7 +16,7 @@ module Sashite
   #
   #   [<state-modifier>]<letter>[<terminal-marker>]
   #
-  # - *Letter* (+A-Z+, +a-z+): Piece type and side
+  # - *Letter* (+A-Z+, +a-z+): Piece name abbreviation and side
   # - *State modifier*: <tt>+</tt> (enhanced), <tt>-</tt> (diminished), or none (normal)
   # - *Terminal marker*: <tt>^</tt> (terminal piece) or none
   #
@@ -32,7 +32,7 @@ module Sashite
   # == Examples
   #
   #   pin = Sashite::Pin.parse("K")
-  #   pin.type       # => :K
+  #   pin.abbr       # => :K
   #   pin.side       # => :first
   #   pin.state      # => :normal
   #   pin.terminal?  # => false
@@ -70,7 +70,7 @@ module Sashite
       components = Parser.parse(string)
 
       Identifier.new(
-        components[:type],
+        components[:abbr],
         components[:side],
         components[:state],
         terminal: components[:terminal]

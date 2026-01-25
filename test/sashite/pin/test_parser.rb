@@ -27,7 +27,7 @@ puts "Valid inputs - simple letters:"
 
 run_test("parses uppercase letter 'K'") do
   result = Sashite::Pin::Parser.parse("K")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == false
@@ -35,7 +35,7 @@ end
 
 run_test("parses lowercase letter 'k'") do
   result = Sashite::Pin::Parser.parse("k")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == false
@@ -44,7 +44,7 @@ end
 run_test("parses all uppercase letters A-Z") do
   ("A".."Z").each do |letter|
     result = Sashite::Pin::Parser.parse(letter)
-    raise "wrong type for #{letter}" unless result[:type] == letter.to_sym
+    raise "wrong abbr for #{letter}" unless result[:abbr] == letter.to_sym
     raise "wrong side for #{letter}" unless result[:side] == :first
   end
 end
@@ -52,7 +52,7 @@ end
 run_test("parses all lowercase letters a-z") do
   ("a".."z").each do |letter|
     result = Sashite::Pin::Parser.parse(letter)
-    raise "wrong type for #{letter}" unless result[:type] == letter.upcase.to_sym
+    raise "wrong abbr for #{letter}" unless result[:abbr] == letter.upcase.to_sym
     raise "wrong side for #{letter}" unless result[:side] == :second
   end
 end
@@ -66,7 +66,7 @@ puts "Valid inputs - state modifiers:"
 
 run_test("parses enhanced uppercase '+R'") do
   result = Sashite::Pin::Parser.parse("+R")
-  raise "wrong type" unless result[:type] == :R
+  raise "wrong abbr" unless result[:abbr] == :R
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :enhanced
   raise "wrong terminal" unless result[:terminal] == false
@@ -74,21 +74,21 @@ end
 
 run_test("parses enhanced lowercase '+r'") do
   result = Sashite::Pin::Parser.parse("+r")
-  raise "wrong type" unless result[:type] == :R
+  raise "wrong abbr" unless result[:abbr] == :R
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :enhanced
 end
 
 run_test("parses diminished uppercase '-P'") do
   result = Sashite::Pin::Parser.parse("-P")
-  raise "wrong type" unless result[:type] == :P
+  raise "wrong abbr" unless result[:abbr] == :P
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :diminished
 end
 
 run_test("parses diminished lowercase '-p'") do
   result = Sashite::Pin::Parser.parse("-p")
-  raise "wrong type" unless result[:type] == :P
+  raise "wrong abbr" unless result[:abbr] == :P
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :diminished
 end
@@ -102,7 +102,7 @@ puts "Valid inputs - terminal marker:"
 
 run_test("parses terminal uppercase 'K^'") do
   result = Sashite::Pin::Parser.parse("K^")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == true
@@ -110,7 +110,7 @@ end
 
 run_test("parses terminal lowercase 'k^'") do
   result = Sashite::Pin::Parser.parse("k^")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong terminal" unless result[:terminal] == true
 end
@@ -124,7 +124,7 @@ puts "Valid inputs - combined modifiers:"
 
 run_test("parses enhanced terminal '+K^'") do
   result = Sashite::Pin::Parser.parse("+K^")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :enhanced
   raise "wrong terminal" unless result[:terminal] == true
@@ -132,7 +132,7 @@ end
 
 run_test("parses diminished terminal '-k^'") do
   result = Sashite::Pin::Parser.parse("-k^")
-  raise "wrong type" unless result[:type] == :K
+  raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :diminished
   raise "wrong terminal" unless result[:terminal] == true
@@ -387,7 +387,7 @@ run_test("rejects array") do
 end
 
 run_test("rejects hash") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?({ type: :K })
+  raise "should be invalid" if Sashite::Pin::Parser.valid?({ abbr: :K })
 end
 
 run_test("rejects symbol") do
@@ -404,7 +404,7 @@ puts "Round-trip tests:"
 run_test("round-trip simple letters") do
   %w[K k Q q R r].each do |pin|
     result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:type], result[:side], result[:state], terminal: result[:terminal])
+    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
@@ -412,7 +412,7 @@ end
 run_test("round-trip with state modifiers") do
   %w[+K +k -P -p +R -r].each do |pin|
     result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:type], result[:side], result[:state], terminal: result[:terminal])
+    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
@@ -420,7 +420,7 @@ end
 run_test("round-trip with terminal marker") do
   %w[K^ k^ Q^ q^].each do |pin|
     result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:type], result[:side], result[:state], terminal: result[:terminal])
+    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
@@ -428,7 +428,7 @@ end
 run_test("round-trip combined") do
   %w[+K^ -k^ +Q^ -q^].each do |pin|
     result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:type], result[:side], result[:state], terminal: result[:terminal])
+    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end

@@ -35,7 +35,7 @@ require "sashite/pin"
 
 # Standard parsing (raises on error)
 pin = Sashite::Pin.parse("K")
-pin.type       # => :K
+pin.abbr       # => :K
 pin.side       # => :first
 pin.state      # => :normal
 pin.terminal?  # => false
@@ -84,23 +84,6 @@ Sashite::Pin.valid?("K^")       # => true
 Sashite::Pin.valid?("invalid")  # => false
 ```
 
-### Accessing Identifier Data
-
-```ruby
-pin = Sashite::Pin.parse("+K^")
-
-# Get attributes
-pin.type       # => :K
-pin.side       # => :first
-pin.state      # => :enhanced
-pin.terminal?  # => true
-
-# Get string components
-pin.letter  # => "K"
-pin.prefix  # => "+"
-pin.suffix  # => "^"
-```
-
 ### Transformations
 
 All transformations return new immutable instances.
@@ -117,12 +100,12 @@ pin.normalize.to_s  # => "K"
 pin.flip.to_s  # => "k"
 
 # Terminal transformations
-pin.mark_terminal.to_s    # => "K^"
-pin.unmark_terminal.to_s  # => "K"
+pin.terminal.to_s      # => "K^"
+pin.non_terminal.to_s  # => "K"
 
 # Attribute changes
-pin.with_type(:Q).to_s       # => "Q"
-pin.with_side(:second).to_s  # => "k"
+pin.with_abbr(:Q).to_s            # => "Q"
+pin.with_side(:second).to_s       # => "k"
 pin.with_state(:enhanced).to_s    # => "+K"
 pin.with_terminal(true).to_s      # => "K^"
 ```
@@ -146,7 +129,7 @@ pin.terminal?  # => true
 
 # Comparison queries
 other = Sashite::Pin.parse("k")
-pin.same_type?(other)      # => true
+pin.same_abbr?(other)      # => true
 pin.same_side?(other)      # => false
 pin.same_state?(other)     # => false
 pin.same_terminal?(other)  # => false
@@ -162,19 +145,19 @@ class Sashite::Pin::Identifier
   # Creates an Identifier from attributes.
   # Raises ArgumentError if attributes are invalid.
   #
-  # @param type [Symbol] Piece type (:A to :Z)
-  # @param side [Symbol] Player side (:first or :second)
+  # @param abbr [Symbol] Piece name abbreviation (:A to :Z)
+  # @param side [Symbol] Piece side (:first or :second)
   # @param state [Symbol] Piece state (:normal, :enhanced, or :diminished)
   # @param terminal [Boolean] Terminal status
   # @return [Identifier]
-  def initialize(type, side, state = :normal, terminal: false)
+  def initialize(abbr, side, state = :normal, terminal: false)
 
-  # Returns the piece type (always uppercase symbol).
+  # Returns the piece name abbreviation (always uppercase symbol).
   #
   # @return [Symbol]
-  def type
+  def abbr
 
-  # Returns the player side.
+  # Returns the piece side.
   #
   # @return [Symbol] :first or :second
   def side
@@ -199,7 +182,7 @@ end
 ### Constants
 
 ```ruby
-Sashite::Pin::Constants::VALID_TYPES       # => [:A, :B, ..., :Z]
+Sashite::Pin::Constants::VALID_ABBRS       # => [:A, :B, ..., :Z]
 Sashite::Pin::Constants::VALID_SIDES       # => [:first, :second]
 Sashite::Pin::Constants::VALID_STATES      # => [:normal, :enhanced, :diminished]
 Sashite::Pin::Constants::MAX_STRING_LENGTH # => 3
@@ -229,8 +212,10 @@ def Sashite::Pin.valid?(string)
 
 ### Transformations
 
+All transformations return new `Sashite::Pin::Identifier` instances:
+
 ```ruby
-# State transformations (return new Identifier)
+# State transformations
 def enhance     # => Identifier with :enhanced state
 def diminish    # => Identifier with :diminished state
 def normalize   # => Identifier with :normal state
@@ -239,14 +224,36 @@ def normalize   # => Identifier with :normal state
 def flip        # => Identifier with opposite side
 
 # Terminal transformations
-def mark_terminal    # => Identifier with terminal: true
-def unmark_terminal  # => Identifier with terminal: false
+def terminal      # => Identifier with terminal: true
+def non_terminal  # => Identifier with terminal: false
 
 # Attribute changes
-def with_type(new_type)        # => Identifier with different type
-def with_side(new_side)        # => Identifier with different side
-def with_state(new_state)      # => Identifier with different state
+def with_abbr(new_abbr)         # => Identifier with different abbreviation
+def with_side(new_side)         # => Identifier with different side
+def with_state(new_state)       # => Identifier with different state
 def with_terminal(new_terminal) # => Identifier with specified terminal status
+```
+
+### Queries
+
+```ruby
+# State queries
+def normal?      # => Boolean
+def enhanced?    # => Boolean
+def diminished?  # => Boolean
+
+# Side queries
+def first_player?   # => Boolean
+def second_player?  # => Boolean
+
+# Terminal query
+def terminal?  # => Boolean
+
+# Comparison queries
+def same_abbr?(other)      # => Boolean
+def same_side?(other)      # => Boolean
+def same_state?(other)     # => Boolean
+def same_terminal?(other)  # => Boolean
 ```
 
 ### Errors
@@ -263,11 +270,11 @@ All parsing and validation errors raise `ArgumentError` with descriptive message
 
 ## Design Principles
 
-- **Bounded values**: Explicit validation of types, sides, states
+- **Bounded values**: Explicit validation of abbreviations, sides, and states
 - **Object-oriented**: `Identifier` class enables methods and encapsulation
 - **Ruby idioms**: `valid?` predicate, `to_s` conversion, `ArgumentError` for invalid input
 - **Immutable identifiers**: Frozen instances prevent mutation
-- **Transformation methods**: Return new instances for state changes
+- **Transformation methods**: Return new instances for attribute changes
 - **No dependencies**: Pure Ruby standard library only
 
 ## Related Specifications
