@@ -1,141 +1,269 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require_relative "../../helper"
 require_relative "../../../lib/sashite/pin/parser"
 require_relative "../../../lib/sashite/pin/identifier"
-
-# Helper function to run a test and report errors
-def run_test(name)
-  print "  #{name}... "
-  yield
-  puts "✓"
-rescue StandardError => e
-  warn "✗ Failure: #{e.message}"
-  warn "    #{e.backtrace.first}"
-  exit(1)
-end
 
 puts
 puts "=== Parser Tests ==="
 puts
 
+Parser = Sashite::Pin::Parser
+Id     = Sashite::Pin::Identifier
+Msg    = Sashite::Pin::Errors::Argument::Messages
+
 # ============================================================================
-# VALID INPUTS - SIMPLE LETTERS
+# SAFE_PARSE - VALID INPUTS - SIMPLE LETTERS
 # ============================================================================
 
-puts "Valid inputs - simple letters:"
+puts "safe_parse - simple letters:"
 
-run_test("parses uppercase letter 'K'") do
-  result = Sashite::Pin::Parser.parse("K")
+Test("parses uppercase letter 'K'") do
+  result = Parser.safe_parse("K")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == false
 end
 
-run_test("parses lowercase letter 'k'") do
-  result = Sashite::Pin::Parser.parse("k")
+Test("parses lowercase letter 'k'") do
+  result = Parser.safe_parse("k")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == false
 end
 
-run_test("parses all uppercase letters A-Z") do
+Test("parses all uppercase letters A-Z") do
   ("A".."Z").each do |letter|
-    result = Sashite::Pin::Parser.parse(letter)
+    result = Parser.safe_parse(letter)
+    raise "nil for #{letter}" if result.nil?
     raise "wrong abbr for #{letter}" unless result[:abbr] == letter.to_sym
     raise "wrong side for #{letter}" unless result[:side] == :first
   end
 end
 
-run_test("parses all lowercase letters a-z") do
+Test("parses all lowercase letters a-z") do
   ("a".."z").each do |letter|
-    result = Sashite::Pin::Parser.parse(letter)
+    result = Parser.safe_parse(letter)
+    raise "nil for #{letter}" if result.nil?
     raise "wrong abbr for #{letter}" unless result[:abbr] == letter.upcase.to_sym
     raise "wrong side for #{letter}" unless result[:side] == :second
   end
 end
 
 # ============================================================================
-# VALID INPUTS - WITH STATE MODIFIERS
+# SAFE_PARSE - VALID INPUTS - STATE MODIFIERS
 # ============================================================================
 
 puts
-puts "Valid inputs - state modifiers:"
+puts "safe_parse - state modifiers:"
 
-run_test("parses enhanced uppercase '+R'") do
-  result = Sashite::Pin::Parser.parse("+R")
+Test("parses enhanced uppercase '+R'") do
+  result = Parser.safe_parse("+R")
   raise "wrong abbr" unless result[:abbr] == :R
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :enhanced
   raise "wrong terminal" unless result[:terminal] == false
 end
 
-run_test("parses enhanced lowercase '+r'") do
-  result = Sashite::Pin::Parser.parse("+r")
+Test("parses enhanced lowercase '+r'") do
+  result = Parser.safe_parse("+r")
   raise "wrong abbr" unless result[:abbr] == :R
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :enhanced
 end
 
-run_test("parses diminished uppercase '-P'") do
-  result = Sashite::Pin::Parser.parse("-P")
+Test("parses diminished uppercase '-P'") do
+  result = Parser.safe_parse("-P")
   raise "wrong abbr" unless result[:abbr] == :P
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :diminished
 end
 
-run_test("parses diminished lowercase '-p'") do
-  result = Sashite::Pin::Parser.parse("-p")
+Test("parses diminished lowercase '-p'") do
+  result = Parser.safe_parse("-p")
   raise "wrong abbr" unless result[:abbr] == :P
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :diminished
 end
 
 # ============================================================================
-# VALID INPUTS - WITH TERMINAL MARKER
+# SAFE_PARSE - VALID INPUTS - TERMINAL MARKER
 # ============================================================================
 
 puts
-puts "Valid inputs - terminal marker:"
+puts "safe_parse - terminal marker:"
 
-run_test("parses terminal uppercase 'K^'") do
-  result = Sashite::Pin::Parser.parse("K^")
+Test("parses terminal uppercase 'K^'") do
+  result = Parser.safe_parse("K^")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :normal
   raise "wrong terminal" unless result[:terminal] == true
 end
 
-run_test("parses terminal lowercase 'k^'") do
-  result = Sashite::Pin::Parser.parse("k^")
+Test("parses terminal lowercase 'k^'") do
+  result = Parser.safe_parse("k^")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong terminal" unless result[:terminal] == true
 end
 
 # ============================================================================
-# VALID INPUTS - COMBINED
+# SAFE_PARSE - VALID INPUTS - COMBINED
 # ============================================================================
 
 puts
-puts "Valid inputs - combined modifiers:"
+puts "safe_parse - combined modifiers:"
 
-run_test("parses enhanced terminal '+K^'") do
-  result = Sashite::Pin::Parser.parse("+K^")
+Test("parses enhanced terminal '+K^'") do
+  result = Parser.safe_parse("+K^")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :first
   raise "wrong state" unless result[:state] == :enhanced
   raise "wrong terminal" unless result[:terminal] == true
 end
 
-run_test("parses diminished terminal '-k^'") do
-  result = Sashite::Pin::Parser.parse("-k^")
+Test("parses diminished terminal '-k^'") do
+  result = Parser.safe_parse("-k^")
   raise "wrong abbr" unless result[:abbr] == :K
   raise "wrong side" unless result[:side] == :second
   raise "wrong state" unless result[:state] == :diminished
   raise "wrong terminal" unless result[:terminal] == true
+end
+
+# ============================================================================
+# SAFE_PARSE - INVALID INPUTS (returns nil, never raises)
+# ============================================================================
+
+puts
+puts "safe_parse - invalid inputs return nil:"
+
+Test("returns nil for empty string") do
+  raise "should be nil" unless Parser.safe_parse("").nil?
+end
+
+Test("returns nil for too-long input") do
+  raise "should be nil" unless Parser.safe_parse("+K^X").nil?
+  raise "should be nil" unless Parser.safe_parse("invalid").nil?
+end
+
+Test("returns nil for modifier only") do
+  raise "should be nil" unless Parser.safe_parse("+").nil?
+  raise "should be nil" unless Parser.safe_parse("-").nil?
+end
+
+Test("returns nil for digit only") do
+  raise "should be nil" unless Parser.safe_parse("1").nil?
+end
+
+Test("returns nil for terminal marker only") do
+  raise "should be nil" unless Parser.safe_parse("^").nil?
+end
+
+Test("returns nil for two letters") do
+  raise "should be nil" unless Parser.safe_parse("KQ").nil?
+end
+
+Test("returns nil for letter + invalid char") do
+  raise "should be nil" unless Parser.safe_parse("K!").nil?
+  raise "should be nil" unless Parser.safe_parse("K1").nil?
+end
+
+Test("returns nil for non-string types") do
+  raise "should be nil" unless Parser.safe_parse(nil).nil?
+  raise "should be nil" unless Parser.safe_parse(123).nil?
+  raise "should be nil" unless Parser.safe_parse(:K).nil?
+  raise "should be nil" unless Parser.safe_parse([:K]).nil?
+  raise "should be nil" unless Parser.safe_parse({ abbr: :K }).nil?
+end
+
+# ============================================================================
+# PARSE - RAISING PATH (specific error messages)
+# ============================================================================
+
+puts
+puts "parse - empty input:"
+
+Test("raises on empty string") do
+  Parser.parse("")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::EMPTY_INPUT
+end
+
+puts
+puts "parse - input too long:"
+
+Test("raises on 4 characters") do
+  Parser.parse("+K^X")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::INPUT_TOO_LONG
+end
+
+Test("raises on many characters") do
+  Parser.parse("invalid")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::INPUT_TOO_LONG
+end
+
+puts
+puts "parse - must contain one letter:"
+
+Test("raises on modifier only") do
+  Parser.parse("+")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::MUST_CONTAIN_ONE_LETTER
+end
+
+Test("raises on digit only") do
+  Parser.parse("1")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::MUST_CONTAIN_ONE_LETTER
+end
+
+Test("raises on terminal marker only") do
+  Parser.parse("^")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::MUST_CONTAIN_ONE_LETTER
+end
+
+Test("raises on non-string type") do
+  Parser.parse(nil)
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::MUST_CONTAIN_ONE_LETTER
+end
+
+puts
+puts "parse - invalid terminal marker:"
+
+Test("raises on two letters") do
+  Parser.parse("KQ")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::INVALID_TERMINAL_MARKER
+end
+
+Test("raises on letter followed by invalid character") do
+  Parser.parse("K!")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::INVALID_TERMINAL_MARKER
+end
+
+Test("raises on letter followed by digit") do
+  Parser.parse("K1")
+  raise "should have raised"
+rescue Sashite::Pin::Errors::Argument => e
+  raise "wrong message" unless e.message == Msg::INVALID_TERMINAL_MARKER
 end
 
 # ============================================================================
@@ -145,114 +273,23 @@ end
 puts
 puts "valid? method:"
 
-run_test("returns true for valid simple letter") do
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("K")
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("k")
+Test("returns true for valid simple letter") do
+  raise "should be valid" unless Parser.valid?("K")
+  raise "should be valid" unless Parser.valid?("k")
 end
 
-run_test("returns true for valid with modifiers") do
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("+R")
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("-p")
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("K^")
-  raise "should be valid" unless Sashite::Pin::Parser.valid?("+K^")
+Test("returns true for valid with modifiers") do
+  raise "should be valid" unless Parser.valid?("+R")
+  raise "should be valid" unless Parser.valid?("-p")
+  raise "should be valid" unless Parser.valid?("K^")
+  raise "should be valid" unless Parser.valid?("+K^")
 end
 
-run_test("returns false for invalid inputs") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("KK")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("invalid")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?(nil)
-end
-
-# ============================================================================
-# ERROR CASES - EMPTY INPUT
-# ============================================================================
-
-puts
-puts "Error cases - empty input:"
-
-run_test("raises on empty string") do
-  Sashite::Pin::Parser.parse("")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::EMPTY_INPUT
-end
-
-# ============================================================================
-# ERROR CASES - INPUT TOO LONG
-# ============================================================================
-
-puts
-puts "Error cases - input too long:"
-
-run_test("raises on 4 characters") do
-  Sashite::Pin::Parser.parse("+K^X")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INPUT_TOO_LONG
-end
-
-run_test("raises on many characters") do
-  Sashite::Pin::Parser.parse("invalid")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INPUT_TOO_LONG
-end
-
-# ============================================================================
-# ERROR CASES - MUST CONTAIN ONE LETTER
-# ============================================================================
-
-puts
-puts "Error cases - must contain one letter:"
-
-run_test("raises on modifier only") do
-  Sashite::Pin::Parser.parse("+")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::MUST_CONTAIN_ONE_LETTER
-end
-
-run_test("raises on digit only") do
-  Sashite::Pin::Parser.parse("1")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::MUST_CONTAIN_ONE_LETTER
-end
-
-run_test("raises on terminal marker only") do
-  Sashite::Pin::Parser.parse("^")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::MUST_CONTAIN_ONE_LETTER
-end
-
-# ============================================================================
-# ERROR CASES - INVALID TERMINAL MARKER
-# ============================================================================
-
-puts
-puts "Error cases - invalid terminal marker:"
-
-run_test("raises on two letters") do
-  Sashite::Pin::Parser.parse("KQ")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TERMINAL_MARKER
-end
-
-run_test("raises on letter followed by invalid character") do
-  Sashite::Pin::Parser.parse("K!")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TERMINAL_MARKER
-end
-
-run_test("raises on letter followed by digit") do
-  Sashite::Pin::Parser.parse("K1")
-  raise "should have raised"
-rescue Sashite::Pin::Errors::Argument => e
-  raise "wrong message" unless e.message == Sashite::Pin::Errors::Argument::Messages::INVALID_TERMINAL_MARKER
+Test("returns false for invalid inputs") do
+  raise "should be invalid" if Parser.valid?("")
+  raise "should be invalid" if Parser.valid?("KK")
+  raise "should be invalid" if Parser.valid?("invalid")
+  raise "should be invalid" if Parser.valid?(nil)
 end
 
 # ============================================================================
@@ -262,16 +299,16 @@ end
 puts
 puts "Security - null byte injection:"
 
-run_test("rejects null byte at end") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\x00")
+Test("rejects null byte at end") do
+  raise "should be invalid" if Parser.valid?("K\x00")
 end
 
-run_test("rejects null byte at start") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\x00K")
+Test("rejects null byte at start") do
+  raise "should be invalid" if Parser.valid?("\x00K")
 end
 
-run_test("rejects null byte in middle") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("+\x00K")
+Test("rejects null byte in middle") do
+  raise "should be invalid" if Parser.valid?("+\x00K")
 end
 
 # ============================================================================
@@ -281,25 +318,25 @@ end
 puts
 puts "Security - control characters:"
 
-run_test("rejects newline") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\n")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\nK")
+Test("rejects newline") do
+  raise "should be invalid" if Parser.valid?("K\n")
+  raise "should be invalid" if Parser.valid?("\nK")
 end
 
-run_test("rejects carriage return") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\r")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\r\nK")
+Test("rejects carriage return") do
+  raise "should be invalid" if Parser.valid?("K\r")
+  raise "should be invalid" if Parser.valid?("\r\nK")
 end
 
-run_test("rejects tab") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\t")
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\tK")
+Test("rejects tab") do
+  raise "should be invalid" if Parser.valid?("K\t")
+  raise "should be invalid" if Parser.valid?("\tK")
 end
 
-run_test("rejects other control characters") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\x01") # SOH
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\x1b") # ESC
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\x7f") # DEL
+Test("rejects other control characters") do
+  raise "should be invalid" if Parser.valid?("K\x01") # SOH
+  raise "should be invalid" if Parser.valid?("K\x1b") # ESC
+  raise "should be invalid" if Parser.valid?("K\x7f") # DEL
 end
 
 # ============================================================================
@@ -309,23 +346,18 @@ end
 puts
 puts "Security - Unicode lookalikes:"
 
-run_test("rejects Cyrillic lookalikes") do
-  # Cyrillic 'К' (U+041A) looks like Latin 'K'
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xD0\x9A")
-  # Cyrillic 'а' (U+0430) looks like Latin 'a'
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xD0\xB0")
+Test("rejects Cyrillic lookalikes") do
+  raise "should be invalid" if Parser.valid?("\xD0\x9A")  # Cyrillic 'К' (U+041A)
+  raise "should be invalid" if Parser.valid?("\xD0\xB0")  # Cyrillic 'а' (U+0430)
 end
 
-run_test("rejects Greek lookalikes") do
-  # Greek 'Α' (U+0391) looks like Latin 'A'
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xCE\x91")
+Test("rejects Greek lookalikes") do
+  raise "should be invalid" if Parser.valid?("\xCE\x91")  # Greek 'Α' (U+0391)
 end
 
-run_test("rejects full-width characters") do
-  # Full-width 'K' (U+FF2B)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xEF\xBC\xAB")
-  # Full-width 'k' (U+FF4B)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xEF\xBD\x8B")
+Test("rejects full-width characters") do
+  raise "should be invalid" if Parser.valid?("\xEF\xBC\xAB")  # Full-width 'K' (U+FF2B)
+  raise "should be invalid" if Parser.valid?("\xEF\xBD\x8B")  # Full-width 'k' (U+FF4B)
 end
 
 # ============================================================================
@@ -335,14 +367,12 @@ end
 puts
 puts "Security - combining characters:"
 
-run_test("rejects combining acute accent") do
-  # 'K' + combining acute accent (U+0301)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\xCC\x81")
+Test("rejects combining acute accent") do
+  raise "should be invalid" if Parser.valid?("K\xCC\x81")  # U+0301
 end
 
-run_test("rejects combining diaeresis") do
-  # 'K' + combining diaeresis (U+0308)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\xCC\x88")
+Test("rejects combining diaeresis") do
+  raise "should be invalid" if Parser.valid?("K\xCC\x88")  # U+0308
 end
 
 # ============================================================================
@@ -352,19 +382,16 @@ end
 puts
 puts "Security - zero-width characters:"
 
-run_test("rejects zero-width space") do
-  # Zero-width space (U+200B)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\xE2\x80\x8B")
+Test("rejects zero-width space") do
+  raise "should be invalid" if Parser.valid?("K\xE2\x80\x8B")  # U+200B
 end
 
-run_test("rejects zero-width non-joiner") do
-  # Zero-width non-joiner (U+200C)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("K\xE2\x80\x8C")
+Test("rejects zero-width non-joiner") do
+  raise "should be invalid" if Parser.valid?("K\xE2\x80\x8C")  # U+200C
 end
 
-run_test("rejects BOM") do
-  # Byte order mark (U+FEFF)
-  raise "should be invalid" if Sashite::Pin::Parser.valid?("\xEF\xBB\xBFK")
+Test("rejects BOM") do
+  raise "should be invalid" if Parser.valid?("\xEF\xBB\xBFK")  # U+FEFF
 end
 
 # ============================================================================
@@ -374,61 +401,61 @@ end
 puts
 puts "Security - non-string input:"
 
-run_test("rejects nil") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?(nil)
+Test("rejects nil") do
+  raise "should be invalid" if Parser.valid?(nil)
 end
 
-run_test("rejects integer") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?(123)
+Test("rejects integer") do
+  raise "should be invalid" if Parser.valid?(123)
 end
 
-run_test("rejects array") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?([:K])
+Test("rejects array") do
+  raise "should be invalid" if Parser.valid?([:K])
 end
 
-run_test("rejects hash") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?({ abbr: :K })
+Test("rejects hash") do
+  raise "should be invalid" if Parser.valid?({ abbr: :K })
 end
 
-run_test("rejects symbol") do
-  raise "should be invalid" if Sashite::Pin::Parser.valid?(:K)
+Test("rejects symbol") do
+  raise "should be invalid" if Parser.valid?(:K)
 end
 
 # ============================================================================
-# ROUND-TRIP TESTS
+# ROUND-TRIP TESTS (parse → Identifier.fetch → to_s)
 # ============================================================================
 
 puts
 puts "Round-trip tests:"
 
-run_test("round-trip simple letters") do
+Test("round-trip simple letters") do
   %w[K k Q q R r].each do |pin|
-    result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+    result = Parser.parse(pin)
+    identifier = Id.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
 
-run_test("round-trip with state modifiers") do
+Test("round-trip with state modifiers") do
   %w[+K +k -P -p +R -r].each do |pin|
-    result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+    result = Parser.parse(pin)
+    identifier = Id.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
 
-run_test("round-trip with terminal marker") do
+Test("round-trip with terminal marker") do
   %w[K^ k^ Q^ q^].each do |pin|
-    result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+    result = Parser.parse(pin)
+    identifier = Id.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end
 
-run_test("round-trip combined") do
+Test("round-trip combined") do
   %w[+K^ -k^ +Q^ -q^].each do |pin|
-    result = Sashite::Pin::Parser.parse(pin)
-    identifier = Sashite::Pin::Identifier.new(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+    result = Parser.parse(pin)
+    identifier = Id.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
     raise "round-trip failed for #{pin}" unless identifier.to_s == pin
   end
 end

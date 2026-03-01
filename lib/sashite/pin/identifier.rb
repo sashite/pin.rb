@@ -5,28 +5,62 @@ require_relative "errors"
 
 module Sashite
   module Pin
-    # Represents a parsed PIN (Piece Identifier Notation) identifier.
+    # Flyweight Identifier for PIN (Piece Identifier Notation).
     #
-    # An Identifier encodes four attributes of a piece:
-    # - Abbr: the piece name abbreviation (A-Z as uppercase symbol)
-    # - Side: the piece side (:first or :second)
-    # - State: the piece state (:normal, :enhanced, or :diminished)
-    # - Terminal: whether the piece is terminal (true or false)
+    # PIN has a closed domain of exactly 312 valid tokens
+    # (26 abbreviations × 2 sides × 3 states × 2 terminal).
+    # All 312 Identifier instances are pre-instantiated and frozen at load time.
     #
-    # Instances are immutable (frozen after creation).
+    # Every public entry point ({.fetch}, transformations, Pin.parse, Pin.safe_parse)
+    # returns a cached instance from the pool via integer-keyed Array lookup.
+    # No Identifier is ever allocated after the module loads.
     #
-    # @example Creating identifiers
-    #   pin = Identifier.new(:K, :first)
-    #   pin = Identifier.new(:R, :second, :enhanced)
-    #   pin = Identifier.new(:K, :first, :normal, terminal: true)
+    # @example Retrieve from pool
+    #   Identifier.fetch(:K, :first)                         # => #<Sashite::Pin::Identifier K>
+    #   Identifier.fetch(:R, :second, :enhanced)             # => #<Sashite::Pin::Identifier +r>
+    #   Identifier.fetch(:K, :first, :normal, terminal: true) # => #<Sashite::Pin::Identifier K^>
     #
-    # @example String conversion
-    #   Identifier.new(:K, :first).to_s                          # => "K"
-    #   Identifier.new(:R, :second, :enhanced).to_s              # => "+r"
-    #   Identifier.new(:K, :first, :normal, terminal: true).to_s # => "K^"
+    # @example Identity guarantee
+    #   Identifier.fetch(:K, :first).equal?(Identifier.fetch(:K, :first))  # => true
     #
     # @see https://sashite.dev/specs/pin/1.0.0/
     class Identifier
+      # ==================================================================
+      # Pool key computation
+      # ==================================================================
+      # Layout: abbr(0-25) * 12 + side(0-1) * 6 + state(0-2) * 2 + terminal(0-1)
+      # Range:  0..311 (312 total)
+
+      # @!visibility private
+      ABBR_ORDINAL = Constants::VALID_ABBRS.each_with_index.to_h.freeze
+
+      # @!visibility private
+      SIDE_ORDINAL = { first: 0, second: 1 }.freeze
+
+      # @!visibility private
+      STATE_ORDINAL = { normal: 0, enhanced: 1, diminished: 2 }.freeze
+
+      # @!visibility private
+      OPPOSITE_SIDE = { first: :second, second: :first }.freeze
+
+      # Pre-computed string fragments for to_s construction (init-time only).
+      # @!visibility private
+      PREFIX_STR = {
+        normal:     Constants::EMPTY_STRING,
+        enhanced:   Constants::ENHANCED_PREFIX,
+        diminished: Constants::DIMINISHED_PREFIX
+      }.freeze
+
+      # @!visibility private
+      SUFFIX_STR = { false => Constants::EMPTY_STRING, true => Constants::TERMINAL_SUFFIX }.freeze
+
+      private_constant :ABBR_ORDINAL, :SIDE_ORDINAL, :STATE_ORDINAL,
+                       :OPPOSITE_SIDE, :PREFIX_STR, :SUFFIX_STR
+
+      # ==================================================================
+      # Attributes
+      # ==================================================================
+
       # @return [Symbol] Piece name abbreviation (:A to :Z, always uppercase)
       attr_reader :abbr
 
@@ -36,430 +70,302 @@ module Sashite
       # @return [Symbol] Piece state (:normal, :enhanced, or :diminished)
       attr_reader :state
 
-      # Creates a new Identifier instance.
+      # Creates a new Identifier. Intended for internal pool construction;
+      # prefer {.fetch} or the module-level {Pin.parse} / {Pin.safe_parse}.
       #
       # @param abbr [Symbol] Piece name abbreviation (:A to :Z)
       # @param side [Symbol] Piece side (:first or :second)
       # @param state [Symbol] Piece state (:normal, :enhanced, or :diminished)
       # @param terminal [Boolean] Terminal status
-      # @return [Identifier] A new frozen Identifier instance
       # @raise [Errors::Argument] If any attribute is invalid
-      #
-      # @example
-      #   Identifier.new(:K, :first)
-      #   Identifier.new(:R, :second, :enhanced)
-      #   Identifier.new(:K, :first, :normal, terminal: true)
       def initialize(abbr, side, state = :normal, terminal: false)
-        validate_abbr!(abbr)
-        validate_side!(side)
-        validate_state!(state)
-        validate_terminal!(terminal)
+        raise Errors::Argument, Errors::Argument::Messages::INVALID_ABBR     unless Constants::ABBR_SET[abbr]
+        raise Errors::Argument, Errors::Argument::Messages::INVALID_SIDE     unless Constants::SIDE_SET[side]
+        raise Errors::Argument, Errors::Argument::Messages::INVALID_STATE    unless Constants::STATE_SET[state]
+        raise Errors::Argument, Errors::Argument::Messages::INVALID_TERMINAL unless terminal.equal?(true) || terminal.equal?(false)
 
-        @abbr = abbr
-        @side = side
-        @state = state
+        @abbr     = abbr
+        @side     = side
+        @state    = state
         @terminal = terminal
+
+        # Pre-compute derived values (once per instance, at load time).
+        letter = side.equal?(:first) ? abbr.to_s : (abbr.to_s.getbyte(0) + Constants::CASE_OFFSET).chr
+        @string  = "#{PREFIX_STR[state]}#{letter}#{SUFFIX_STR[terminal]}".freeze
+        @hash    = (ABBR_ORDINAL[abbr] * 12 + SIDE_ORDINAL[side] * 6 + STATE_ORDINAL[state] * 2 + (terminal ? 1 : 0)).hash
+        @inspect = "#<#{self.class} #{@string}>".freeze
 
         freeze
       end
 
-      # Returns the terminal status.
-      #
       # @return [Boolean] true if terminal piece, false otherwise
-      #
-      # @example
-      #   Identifier.new(:K, :first).terminal?                          # => false
-      #   Identifier.new(:K, :first, :normal, terminal: true).terminal? # => true
       def terminal?
         @terminal
       end
 
-      # ========================================================================
-      # String Conversion
-      # ========================================================================
+      # ==================================================================
+      # String conversion (pre-computed — zero allocation)
+      # ==================================================================
 
-      # Returns the PIN string representation.
-      #
-      # @return [String] The PIN string
-      #
-      # @example
-      #   Identifier.new(:K, :first).to_s                          # => "K"
-      #   Identifier.new(:R, :second, :enhanced).to_s              # => "+r"
-      #   Identifier.new(:K, :first, :normal, terminal: true).to_s # => "K^"
+      # @return [String] The PIN string representation
       def to_s
-        "#{prefix}#{letter}#{suffix}"
+        @string
       end
 
-      # Returns the letter component of the PIN.
-      #
-      # @return [String] Uppercase for first player, lowercase for second
-      #
-      # @example
-      #   Identifier.new(:K, :first).letter  # => "K"
-      #   Identifier.new(:K, :second).letter # => "k"
-      def letter
-        case side
-        when :first then String(abbr.upcase)
-        when :second then String(abbr.downcase)
-        end
+      # @return [String] Inspect representation
+      def inspect
+        @inspect
       end
 
-      # Returns the state prefix of the PIN.
-      #
-      # @return [String] "+" for enhanced, "-" for diminished, "" for normal
-      #
-      # @example
-      #   Identifier.new(:K, :first, :enhanced).prefix   # => "+"
-      #   Identifier.new(:K, :first, :diminished).prefix # => "-"
-      #   Identifier.new(:K, :first, :normal).prefix     # => ""
-      def prefix
-        case state
-        when :enhanced then Constants::ENHANCED_PREFIX
-        when :diminished then Constants::DIMINISHED_PREFIX
-        else Constants::EMPTY_STRING
-        end
-      end
+      # ==================================================================
+      # State transformations (unchecked pool lookup — zero allocation)
+      # ==================================================================
 
-      # Returns the terminal suffix of the PIN.
-      #
-      # @return [String] "^" if terminal, "" otherwise
-      #
-      # @example
-      #   Identifier.new(:K, :first, :normal, terminal: true).suffix # => "^"
-      #   Identifier.new(:K, :first).suffix                          # => ""
-      def suffix
-        terminal? ? Constants::TERMINAL_SUFFIX : Constants::EMPTY_STRING
-      end
-
-      # ========================================================================
-      # State Transformations
-      # ========================================================================
-
-      # Returns a new Identifier with enhanced state.
-      #
-      # @return [Identifier] A new Identifier with :enhanced state
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.enhance.to_s # => "+K"
+      # @return [Identifier] Cached Identifier with :enhanced state
       def enhance
         return self if enhanced?
 
-        self.class.new(abbr, side, :enhanced, terminal: terminal?)
+        _pool_lookup(@abbr, @side, :enhanced, @terminal)
       end
 
-      # Returns a new Identifier with diminished state.
-      #
-      # @return [Identifier] A new Identifier with :diminished state
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.diminish.to_s # => "-K"
+      # @return [Identifier] Cached Identifier with :diminished state
       def diminish
         return self if diminished?
 
-        self.class.new(abbr, side, :diminished, terminal: terminal?)
+        _pool_lookup(@abbr, @side, :diminished, @terminal)
       end
 
-      # Returns a new Identifier with normal state.
-      #
-      # @return [Identifier] A new Identifier with :normal state
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first, :enhanced)
-      #   pin.normalize.to_s # => "K"
+      # @return [Identifier] Cached Identifier with :normal state
       def normalize
         return self if normal?
 
-        self.class.new(abbr, side, :normal, terminal: terminal?)
+        _pool_lookup(@abbr, @side, :normal, @terminal)
       end
 
-      # ========================================================================
-      # Side Transformations
-      # ========================================================================
+      # ==================================================================
+      # Side transformation (unchecked pool lookup — zero allocation)
+      # ==================================================================
 
-      # Returns a new Identifier with the opposite side.
-      #
-      # @return [Identifier] A new Identifier with flipped side
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.flip.to_s # => "k"
+      # @return [Identifier] Cached Identifier with the opposite side
       def flip
-        new_side = first_player? ? :second : :first
-        self.class.new(abbr, new_side, state, terminal: terminal?)
+        _pool_lookup(@abbr, OPPOSITE_SIDE[@side], @state, @terminal)
       end
 
-      # ========================================================================
-      # Terminal Transformations
-      # ========================================================================
+      # ==================================================================
+      # Terminal transformations (unchecked pool lookup — zero allocation)
+      # ==================================================================
 
-      # Returns a new Identifier marked as terminal.
-      #
-      # @return [Identifier] A new Identifier with terminal: true
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.terminal.to_s # => "K^"
+      # @return [Identifier] Cached Identifier with terminal: true
       def terminal
-        return self if terminal?
+        return self if @terminal
 
-        self.class.new(abbr, side, state, terminal: true)
+        _pool_lookup(@abbr, @side, @state, true)
       end
 
-      # Returns a new Identifier unmarked as terminal.
-      #
-      # @return [Identifier] A new Identifier with terminal: false
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first, :normal, terminal: true)
-      #   pin.non_terminal.to_s # => "K"
+      # @return [Identifier] Cached Identifier with terminal: false
       def non_terminal
-        return self unless terminal?
+        return self unless @terminal
 
-        self.class.new(abbr, side, state, terminal: false)
+        _pool_lookup(@abbr, @side, @state, false)
       end
 
-      # ========================================================================
-      # Attribute Transformations
-      # ========================================================================
+      # ==================================================================
+      # Attribute transformations (validated — user input may be invalid)
+      # ==================================================================
 
-      # Returns a new Identifier with a different abbreviation.
-      #
       # @param new_abbr [Symbol] The new piece name abbreviation (:A to :Z)
-      # @return [Identifier] A new Identifier with the specified abbreviation
+      # @return [Identifier] Cached Identifier with the specified abbreviation
       # @raise [Errors::Argument] If the abbreviation is invalid
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.with_abbr(:Q).to_s # => "Q"
       def with_abbr(new_abbr)
-        return self if abbr.equal?(new_abbr)
+        return self if @abbr.equal?(new_abbr)
 
-        self.class.new(new_abbr, side, state, terminal: terminal?)
+        self.class.fetch(new_abbr, @side, @state, terminal: @terminal)
       end
 
-      # Returns a new Identifier with a different side.
-      #
       # @param new_side [Symbol] The new side (:first or :second)
-      # @return [Identifier] A new Identifier with the specified side
+      # @return [Identifier] Cached Identifier with the specified side
       # @raise [Errors::Argument] If the side is invalid
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.with_side(:second).to_s # => "k"
       def with_side(new_side)
-        return self if side.equal?(new_side)
+        return self if @side.equal?(new_side)
 
-        self.class.new(abbr, new_side, state, terminal: terminal?)
+        self.class.fetch(@abbr, new_side, @state, terminal: @terminal)
       end
 
-      # Returns a new Identifier with a different state.
-      #
       # @param new_state [Symbol] The new state (:normal, :enhanced, or :diminished)
-      # @return [Identifier] A new Identifier with the specified state
+      # @return [Identifier] Cached Identifier with the specified state
       # @raise [Errors::Argument] If the state is invalid
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.with_state(:enhanced).to_s # => "+K"
       def with_state(new_state)
-        return self if state.equal?(new_state)
+        return self if @state.equal?(new_state)
 
-        self.class.new(abbr, side, new_state, terminal: terminal?)
+        self.class.fetch(@abbr, @side, new_state, terminal: @terminal)
       end
 
-      # Returns a new Identifier with a different terminal status.
-      #
       # @param new_terminal [Boolean] The new terminal status
-      # @return [Identifier] A new Identifier with the specified terminal status
+      # @return [Identifier] Cached Identifier with the specified terminal status
       # @raise [Errors::Argument] If the terminal is not a boolean
-      #
-      # @example
-      #   pin = Identifier.new(:K, :first)
-      #   pin.with_terminal(true).to_s # => "K^"
       def with_terminal(new_terminal)
-        return self if terminal?.equal?(new_terminal)
+        return self if @terminal.equal?(new_terminal)
 
-        self.class.new(abbr, side, state, terminal: new_terminal)
+        self.class.fetch(@abbr, @side, @state, terminal: new_terminal)
       end
 
-      # ========================================================================
-      # State Queries
-      # ========================================================================
+      # ==================================================================
+      # State queries
+      # ==================================================================
 
-      # Checks if the Identifier has normal state.
-      #
       # @return [Boolean] true if normal state
-      #
-      # @example
-      #   Identifier.new(:K, :first).normal? # => true
       def normal?
-        state.equal?(:normal)
+        @state.equal?(:normal)
       end
 
-      # Checks if the Identifier has enhanced state.
-      #
       # @return [Boolean] true if enhanced state
-      #
-      # @example
-      #   Identifier.new(:K, :first, :enhanced).enhanced? # => true
       def enhanced?
-        state.equal?(:enhanced)
+        @state.equal?(:enhanced)
       end
 
-      # Checks if the Identifier has diminished state.
-      #
       # @return [Boolean] true if diminished state
-      #
-      # @example
-      #   Identifier.new(:K, :first, :diminished).diminished? # => true
       def diminished?
-        state.equal?(:diminished)
+        @state.equal?(:diminished)
       end
 
-      # ========================================================================
-      # Side Queries
-      # ========================================================================
+      # ==================================================================
+      # Side queries
+      # ==================================================================
 
-      # Checks if the Identifier belongs to the first player.
-      #
       # @return [Boolean] true if first player
-      #
-      # @example
-      #   Identifier.new(:K, :first).first_player? # => true
       def first_player?
-        side.equal?(:first)
+        @side.equal?(:first)
       end
 
-      # Checks if the Identifier belongs to the second player.
-      #
       # @return [Boolean] true if second player
-      #
-      # @example
-      #   Identifier.new(:K, :second).second_player? # => true
       def second_player?
-        side.equal?(:second)
+        @side.equal?(:second)
       end
 
-      # ========================================================================
-      # Comparison Queries
-      # ========================================================================
+      # ==================================================================
+      # Comparison queries
+      # ==================================================================
 
-      # Checks if two Identifiers have the same abbreviation.
-      #
-      # @param other [Identifier] The other Identifier to compare
+      # @param other [Identifier]
       # @return [Boolean] true if same abbreviation
-      #
-      # @example
-      #   pin1 = Identifier.new(:K, :first)
-      #   pin2 = Identifier.new(:K, :second)
-      #   pin1.same_abbr?(pin2) # => true
       def same_abbr?(other)
-        abbr.equal?(other.abbr)
+        @abbr.equal?(other.abbr)
       end
 
-      # Checks if two Identifiers have the same side.
-      #
-      # @param other [Identifier] The other Identifier to compare
+      # @param other [Identifier]
       # @return [Boolean] true if same side
-      #
-      # @example
-      #   pin1 = Identifier.new(:K, :first)
-      #   pin2 = Identifier.new(:Q, :first)
-      #   pin1.same_side?(pin2) # => true
       def same_side?(other)
-        side.equal?(other.side)
+        @side.equal?(other.side)
       end
 
-      # Checks if two Identifiers have the same state.
-      #
-      # @param other [Identifier] The other Identifier to compare
+      # @param other [Identifier]
       # @return [Boolean] true if same state
-      #
-      # @example
-      #   pin1 = Identifier.new(:K, :first, :enhanced)
-      #   pin2 = Identifier.new(:Q, :second, :enhanced)
-      #   pin1.same_state?(pin2) # => true
       def same_state?(other)
-        state.equal?(other.state)
+        @state.equal?(other.state)
       end
 
-      # Checks if two Identifiers have the same terminal status.
-      #
-      # @param other [Identifier] The other Identifier to compare
+      # @param other [Identifier]
       # @return [Boolean] true if same terminal status
-      #
-      # @example
-      #   pin1 = Identifier.new(:K, :first, :normal, terminal: true)
-      #   pin2 = Identifier.new(:Q, :second, :normal, terminal: true)
-      #   pin1.same_terminal?(pin2) # => true
       def same_terminal?(other)
-        terminal?.equal?(other.terminal?)
+        @terminal.equal?(other.terminal?)
       end
 
-      # ========================================================================
+      # ==================================================================
       # Equality
-      # ========================================================================
+      # ==================================================================
 
-      # Checks equality with another Identifier.
+      # With the flyweight pool, pool instances satisfy a == b ⟺ a.equal?(b).
+      # The value-based fallback handles any out-of-pool instance correctly.
       #
-      # @param other [Object] The object to compare
-      # @return [Boolean] true if equal
+      # @param other [Object]
+      # @return [Boolean]
       def ==(other)
-        return false unless self.class === other
-
-        abbr.equal?(other.abbr) &&
-          side.equal?(other.side) &&
-          state.equal?(other.state) &&
-          terminal?.equal?(other.terminal?)
+        equal?(other) || (
+          self.class === other &&
+          @abbr.equal?(other.abbr) &&
+          @side.equal?(other.side) &&
+          @state.equal?(other.state) &&
+          @terminal.equal?(other.terminal?)
+        )
       end
 
       alias eql? ==
 
-      # Returns a hash code for the Identifier.
-      #
-      # @return [Integer] Hash code
+      # @return [Integer] Pre-computed hash code
       def hash
-        [abbr, side, state, terminal?].hash
+        @hash
       end
 
-      # Returns an inspect string for the Identifier.
-      #
-      # @return [String] Inspect representation
-      def inspect
-        "#<#{self.class} #{self}>"
+      # ==================================================================
+      # Class-level pool access
+      # ==================================================================
+
+      class << self
+        # Retrieves a cached Identifier by components. Validates inputs
+        # and raises with a specific diagnostic on failure.
+        #
+        # @param abbr [Symbol] Piece abbreviation (:A through :Z)
+        # @param side [Symbol] Piece side (:first or :second)
+        # @param state [Symbol] Piece state (:normal, :enhanced, or :diminished)
+        # @param terminal [Boolean] Terminal status
+        # @return [Identifier]
+        # @raise [Errors::Argument] If any component is invalid
+        def fetch(abbr, side, state = :normal, terminal: false)
+          ai  = ABBR_ORDINAL[abbr]
+          si  = SIDE_ORDINAL[side]
+          sti = STATE_ORDINAL[state]
+
+          if ai && si && sti && (terminal.equal?(true) || terminal.equal?(false))
+            return POOL[ai * 12 + si * 6 + sti * 2 + (terminal ? 1 : 0)]
+          end
+
+          # Slow path: determine which component is invalid
+          raise_fetch_error!(abbr, side, state, terminal)
+        end
+
+        private
+
+        # @raise [Errors::Argument] Always raises with the most specific message
+        def raise_fetch_error!(abbr, side, state, terminal)
+          msg = Errors::Argument::Messages
+          raise Errors::Argument, msg::INVALID_ABBR     unless Constants::ABBR_SET[abbr]
+          raise Errors::Argument, msg::INVALID_SIDE     unless Constants::SIDE_SET[side]
+          raise Errors::Argument, msg::INVALID_STATE    unless Constants::STATE_SET[state]
+          raise Errors::Argument, msg::INVALID_TERMINAL
+        end
       end
 
       private
 
-      # ========================================================================
-      # Private Validation
-      # ========================================================================
-
-      def validate_abbr!(abbr)
-        return if Constants::VALID_ABBRS.include?(abbr)
-
-        raise Errors::Argument, Errors::Argument::Messages::INVALID_ABBR
+      # Unchecked pool lookup for internal transformations.
+      # All components are known valid (self is a valid pool instance and
+      # the transformation substitutes a hardcoded valid value).
+      # Single array index — zero allocation.
+      #
+      # @return [Identifier]
+      def _pool_lookup(abbr, side, state, terminal)
+        POOL[ABBR_ORDINAL[abbr] * 12 + SIDE_ORDINAL[side] * 6 + STATE_ORDINAL[state] * 2 + (terminal ? 1 : 0)]
       end
 
-      def validate_side!(side)
-        return if Constants::VALID_SIDES.include?(side)
+      # ==================================================================
+      # Flyweight pool construction (runs once at load time)
+      # ==================================================================
 
-        raise Errors::Argument, Errors::Argument::Messages::INVALID_SIDE
+      POOL = ::Array.new(312)
+
+      Constants::VALID_ABBRS.each_with_index do |a, ai|
+        Constants::VALID_SIDES.each_with_index do |s, si|
+          Constants::VALID_STATES.each_with_index do |st, sti|
+            [false, true].each_with_index do |t, ti|
+              POOL[ai * 12 + si * 6 + sti * 2 + ti] = new(a, s, st, terminal: t)
+            end
+          end
+        end
       end
 
-      def validate_state!(state)
-        return if Constants::VALID_STATES.include?(state)
-
-        raise Errors::Argument, Errors::Argument::Messages::INVALID_STATE
-      end
-
-      def validate_terminal!(terminal)
-        return if ::TrueClass === terminal || ::FalseClass === terminal
-
-        raise Errors::Argument, Errors::Argument::Messages::INVALID_TERMINAL
-      end
+      POOL.freeze
+      private_constant :POOL, :ABBR_ORDINAL, :SIDE_ORDINAL, :STATE_ORDINAL,
+                       :OPPOSITE_SIDE, :PREFIX_STR, :SUFFIX_STR
     end
   end
 end

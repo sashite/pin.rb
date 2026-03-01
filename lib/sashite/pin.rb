@@ -6,87 +6,96 @@ require_relative "pin/identifier"
 require_relative "pin/parser"
 
 module Sashite
-  # PIN (Piece Identifier Notation) implementation for Ruby.
+  # PIN (Piece Identifier Notation) — fast, flyweight implementation for Ruby.
   #
-  # PIN provides an ASCII-based format for representing pieces in abstract strategy
-  # board games. It translates piece attributes from the Game Protocol into a compact,
-  # portable notation system.
+  # PIN has a closed domain of exactly 312 valid tokens
+  # (26 letters × 2 sides × 3 states × 2 terminal).
+  # All instances are pre-built and frozen at load time.
+  # Every public method returns a cached object — zero allocation on the hot path.
   #
-  # == Format
+  # == Entry points
   #
-  #   [<state-modifier>]<letter>[<terminal-marker>]
-  #
-  # - *Letter* (+A-Z+, +a-z+): Piece name abbreviation and side
-  # - *State modifier*: <tt>+</tt> (enhanced), <tt>-</tt> (diminished), or none (normal)
-  # - *Terminal marker*: <tt>^</tt> (terminal piece) or none
-  #
-  # == Attributes
-  #
-  # A PIN token encodes exactly these attributes:
-  #
-  # - *Piece Name* → one ASCII letter chosen by the Game / Rule System
-  # - *Piece Side* → the case of that letter (uppercase = first, lowercase = second)
-  # - *Piece State* → an optional prefix (<tt>+</tt> for enhanced, <tt>-</tt> for diminished)
-  # - *Terminal status* → an optional suffix (<tt>^</tt>)
-  #
-  # == Examples
-  #
-  #   pin = Sashite::Pin.parse("K")
-  #   pin.abbr       # => :K
-  #   pin.side       # => :first
-  #   pin.state      # => :normal
-  #   pin.terminal?  # => false
-  #
-  #   pin = Sashite::Pin.parse("+R")
-  #   pin.to_s  # => "+R"
-  #
-  #   pin = Sashite::Pin.parse("k^")
-  #   pin.terminal?  # => true
-  #
-  #   Sashite::Pin.valid?("K^")      # => true
-  #   Sashite::Pin.valid?("invalid") # => false
+  #   Pin.parse(string)       → Identifier (raises on error)
+  #   Pin.safe_parse(string)  → Identifier | nil
+  #   Pin.fetch(abbr, side, …) → Identifier (raises on error)
+  #   Pin.valid?(string)      → Boolean
   #
   # @see https://sashite.dev/specs/pin/1.0.0/
   module Pin
-    # Parses a PIN string into an Identifier.
+    # Parses a PIN string into a cached Identifier.
+    # Raises ArgumentError if the string is not valid.
     #
-    # @param string [String] The PIN string to parse
-    # @return [Identifier] A new Identifier instance
+    # @param string [String] PIN string (1-3 ASCII characters)
+    # @return [Identifier] A pre-instantiated, frozen Identifier
     # @raise [Errors::Argument] If the string is not a valid PIN
     #
     # @example
-    #   Sashite::Pin.parse("K")
-    #   # => #<Sashite::Pin::Identifier K>
-    #
-    #   Sashite::Pin.parse("+r")
-    #   # => #<Sashite::Pin::Identifier +r>
-    #
-    #   Sashite::Pin.parse("K^")
-    #   # => #<Sashite::Pin::Identifier K^>
-    #
-    #   Sashite::Pin.parse("invalid")
-    #   # => raises Errors::Argument
+    #   Sashite::Pin.parse("K")   # => #<Sashite::Pin::Identifier K>
+    #   Sashite::Pin.parse("+r")  # => #<Sashite::Pin::Identifier +r>
+    #   Sashite::Pin.parse("K^")  # => #<Sashite::Pin::Identifier K^>
     def self.parse(string)
-      components = Parser.parse(string)
+      result = Parser.safe_parse(string)
 
-      Identifier.new(
-        components[:abbr],
-        components[:side],
-        components[:state],
-        terminal: components[:terminal]
-      )
+      if result
+        Identifier.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+      else
+        # Slow path: re-parse with diagnostics to raise specific error
+        Parser.parse(string)
+      end
     end
 
-    # Checks if a string is a valid PIN notation.
+    # Parses a PIN string without raising.
+    # Returns a cached Identifier on success, nil on failure.
+    # Never allocates exception objects or captures backtraces.
     #
-    # @param string [String] The string to validate
-    # @return [Boolean] true if valid, false otherwise
+    # @param string [String] PIN string
+    # @return [Identifier, nil]
+    #
+    # @example
+    #   Sashite::Pin.safe_parse("K")       # => #<Sashite::Pin::Identifier K>
+    #   Sashite::Pin.safe_parse("+R^")     # => #<Sashite::Pin::Identifier +R^>
+    #   Sashite::Pin.safe_parse("")         # => nil
+    #   Sashite::Pin.safe_parse("invalid") # => nil
+    #   Sashite::Pin.safe_parse(nil)       # => nil
+    def self.safe_parse(string)
+      result = Parser.safe_parse(string)
+      return unless result
+
+      Identifier.fetch(result[:abbr], result[:side], result[:state], terminal: result[:terminal])
+    end
+
+    # Retrieves a cached Identifier by components.
+    # Bypasses string parsing entirely — direct pool lookup.
+    # Raises ArgumentError if components are invalid.
+    #
+    # @param abbr [Symbol] Piece abbreviation (:A through :Z)
+    # @param side [Symbol] Piece side (:first or :second)
+    # @param state [Symbol] Piece state (:normal, :enhanced, or :diminished)
+    # @param terminal [Boolean] Terminal status
+    # @return [Identifier]
+    # @raise [Errors::Argument] If any component is invalid
+    #
+    # @example
+    #   Sashite::Pin.fetch(:K, :first)                              # => #<Sashite::Pin::Identifier K>
+    #   Sashite::Pin.fetch(:R, :second, :enhanced)                  # => #<Sashite::Pin::Identifier +r>
+    #   Sashite::Pin.fetch(:K, :first, :normal, terminal: true)     # => #<Sashite::Pin::Identifier K^>
+    def self.fetch(abbr, side, state = :normal, terminal: false)
+      Identifier.fetch(abbr, side, state, terminal: terminal)
+    end
+
+    # Reports whether a string is a valid PIN token.
+    # Never raises; returns false for any invalid input.
+    # Uses the exception-free code path internally.
+    #
+    # @param string [String] PIN string
+    # @return [Boolean]
     #
     # @example
     #   Sashite::Pin.valid?("K")        # => true
     #   Sashite::Pin.valid?("+R")       # => true
     #   Sashite::Pin.valid?("K^")       # => true
     #   Sashite::Pin.valid?("invalid")  # => false
+    #   Sashite::Pin.valid?(nil)        # => false
     def self.valid?(string)
       Parser.valid?(string)
     end
